@@ -24,6 +24,12 @@ import {
 // completes; the persistence subscription below reads it lazily at save time.
 let adapter: StorageAdapter = new LocalStorageAdapter()
 
+// True only while applying an update that CAME FROM the server (a poll pull or
+// a conflict resolution). Data received from the server must not be written
+// straight back — doing so bumps the revision and makes the next poll pull
+// again, a feedback loop that, with two clients open, makes tiles visibly jump.
+let applyingRemote = false
+
 /** How long to coalesce rapid edits before writing to storage. */
 const SAVE_DEBOUNCE_MS = 250
 const MAX_HISTORY = 40
@@ -164,7 +170,10 @@ export const useStore = create<StoreState>()((set, get) => {
   function wireSubscription(): void {
     adapter.subscribe?.((incoming) => {
       // Another tab or device wrote; adopt its state rather than fight over it.
+      // Guard the write so the persistence subscription does not save it back.
+      applyingRemote = true
       set({ data: incoming })
+      applyingRemote = false
     })
   }
 
@@ -578,6 +587,13 @@ useStore.subscribe((state, previous) => {
   // Do not try to save while sitting at the passcode gate — there is no
   // credential, and the on-screen data is just the placeholder initial doc.
   if (state.authState === 'required') return
+  // This change is data we just pulled from the server — do not echo it back.
+  // Cancel any pending save and treat it as already persisted.
+  if (applyingRemote) {
+    clearTimeout(saveTimer)
+    lastSaved = state.data
+    return
+  }
   clearTimeout(saveTimer)
   saveTimer = setTimeout(() => {
     const { data } = useStore.getState()
