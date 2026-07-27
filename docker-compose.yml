@@ -35,9 +35,10 @@ services:
     container_name: openloo-api
     restart: unless-stopped
     environment:
-      # Required. Without a passcode the sync store would be open to anyone who
-      # can reach it. Set it in a .env file next to this one (see .env.example).
-      OPENLOO_PASSCODE: ${OPENLOO_PASSCODE:?Set OPENLOO_PASSCODE (copy .env.example to .env and edit it)}
+      # Optional. Set a passcode here to configure it up front, or leave it
+      # blank and create one through the first-run screen in the browser. Until
+      # a passcode exists (either way) the sync store refuses all data access.
+      OPENLOO_PASSCODE: ${OPENLOO_PASSCODE:-}
       DATA_DIR: /data
     volumes:
       - openloo-data:/data

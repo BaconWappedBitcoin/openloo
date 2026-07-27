@@ -18,6 +18,8 @@ export { RemoteStorageAdapter } from './remoteAdapter'
  */
 export async function resolveStorageAdapter(): Promise<StorageAdapter> {
   const health = await probeBackend()
-  if (health) return new RemoteStorageAdapter(health.authRequired)
+  if (health) {
+    return new RemoteStorageAdapter(health.authRequired, '/api', health.needsSetup ?? false)
+  }
   return new LocalStorageAdapter()
 }

@@ -21,23 +21,23 @@ import { join } from 'node:path'
 
 const PORT = Number(process.env.PORT ?? 3000)
 const DATA_DIR = process.env.DATA_DIR ?? '/data'
-const PASSCODE = process.env.OPENLOO_PASSCODE ?? ''
-const AUTH_REQUIRED = PASSCODE.length > 0
+
+// A passcode can come from two places. The env var wins when set (ops override,
+// and how existing deployments work). Otherwise the passcode is one the user
+// creates through the first-run screen, stored hashed on the volume. When
+// neither exists the server is in "setup" mode and refuses data access until a
+// passcode is created.
+const ENV_PASSCODE = process.env.OPENLOO_PASSCODE ?? ''
+const HAS_ENV_PASSCODE = ENV_PASSCODE.length > 0
+const MIN_PASSCODE_LENGTH = 6
 
 const DATA_FILE = join(DATA_DIR, 'data.json')
 const TOKENS_FILE = join(DATA_DIR, 'tokens.json')
+const PASSCODE_FILE = join(DATA_DIR, 'passcode.json')
 
 const MAX_BODY_BYTES = 5 * 1024 * 1024 // generous for a board with uploaded icons
 const TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000 // 30 days
 const TOKEN_BYTES = 32
-
-if (!AUTH_REQUIRED) {
-  console.warn(
-    '[openloo] WARNING: OPENLOO_PASSCODE is not set. The sync API is OPEN to ' +
-      'anyone who can reach it. Set a passcode unless this is on a trusted, ' +
-      'isolated network.',
-  )
-}
 
 // --- persistence -----------------------------------------------------------
 
@@ -113,15 +113,59 @@ function tokenIsValid(token) {
 
 // --- passcode --------------------------------------------------------------
 
-const passcodeHash = AUTH_REQUIRED
-  ? createHash('sha256').update(PASSCODE).digest()
+const envHash = HAS_ENV_PASSCODE
+  ? createHash('sha256').update(ENV_PASSCODE).digest()
   : null
 
-/** Constant-time passcode check, comparing fixed-length hashes. */
+/** A passcode created through the setup screen: { salt, hash } as hex. */
+let storedPasscode = null
+
+async function loadStoredPasscode() {
+  storedPasscode = await readJson(PASSCODE_FILE, null)
+}
+
+/** No passcode configured anywhere yet — the server needs first-run setup. */
+function needsSetup() {
+  return !HAS_ENV_PASSCODE && storedPasscode === null
+}
+
+/** Whether clients must authenticate. True unless we are awaiting setup. */
+function authRequired() {
+  return !needsSetup()
+}
+
+/**
+ * Persist a user-created passcode, salted and hashed. Rejects when a passcode
+ * already exists (setup is one-time) or the passcode is too short.
+ */
+async function createPasscode(candidate) {
+  if (!needsSetup()) throw Object.assign(new Error('Passcode already set.'), { statusCode: 409 })
+  const passcode = String(candidate ?? '')
+  if (passcode.length < MIN_PASSCODE_LENGTH) {
+    throw Object.assign(
+      new Error(`Passcode must be at least ${MIN_PASSCODE_LENGTH} characters.`),
+      { statusCode: 400 },
+    )
+  }
+  const salt = randomBytes(16).toString('hex')
+  const hash = createHash('sha256').update(salt + passcode).digest('hex')
+  storedPasscode = { salt, hash }
+  await withWriteLock(() => atomicWriteJson(PASSCODE_FILE, storedPasscode))
+}
+
+/** Constant-time passcode check against the env or stored credential. */
 function passcodeMatches(candidate) {
-  if (!AUTH_REQUIRED) return true
-  const candidateHash = createHash('sha256').update(String(candidate)).digest()
-  return timingSafeEqual(candidateHash, passcodeHash)
+  if (needsSetup()) return false
+  const value = String(candidate ?? '')
+
+  if (HAS_ENV_PASSCODE) {
+    const candidateHash = createHash('sha256').update(value).digest()
+    return timingSafeEqual(candidateHash, envHash)
+  }
+
+  const candidateHash = createHash('sha256').update(storedPasscode.salt + value).digest()
+  const expected = Buffer.from(storedPasscode.hash, 'hex')
+  return candidateHash.length === expected.length && timingSafeEqual(candidateHash, expected)
 }
 
 // Crude but effective brute-force brake: a short lockout after repeated misses,
@@ -203,7 +247,10 @@ function clientKey(req) {
 }
 
 function authorized(req) {
-  if (!AUTH_REQUIRED) return true
+  // Before a passcode exists, data is off-limits: the only allowed action is
+  // creating the passcode (/api/setup, handled before this gate). This means a
+  // fresh instance is never briefly readable while it waits to be set up.
+  if (needsSetup()) return false
   const token = bearerToken(req)
   return token !== null && tokenIsValid(token)
 }
@@ -216,10 +263,30 @@ async function handle(req, res) {
   const method = req.method ?? 'GET'
 
   if (path === '/api/health') {
-    return send(res, 200, { ok: true, sync: true, authRequired: AUTH_REQUIRED })
+    return send(res, 200, {
+      ok: true,
+      sync: true,
+      authRequired: authRequired(),
+      needsSetup: needsSetup(),
+    })
+  }
+
+  // First-run: create the instance passcode. Only works before one exists.
+  if (path === '/api/setup' && method === 'POST') {
+    if (!needsSetup()) {
+      return send(res, 409, { error: 'A passcode has already been set.' })
+    }
+    const body = await readBody(req).catch(() => undefined)
+    await createPasscode(body?.passcode)
+    // Log the creator straight in so they are not bounced to the login screen.
+    const token = await issueToken()
+    return send(res, 200, { token })
   }
 
   if (path === '/api/session' && method === 'POST') {
+    if (needsSetup()) {
+      return send(res, 409, { error: 'No passcode set yet. Create one first.' })
+    }
     const key = clientKey(req)
     if (tooManyFailures(key)) {
       return send(res, 429, { error: 'Too many attempts. Wait a few minutes.' })
@@ -287,6 +354,7 @@ async function handle(req, res) {
 async function main() {
   await mkdir(DATA_DIR, { recursive: true })
   await loadTokens()
+  await loadStoredPasscode()
 
   const server = createServer((req, res) => {
     handle(req, res).catch((error) => {
@@ -297,9 +365,12 @@ async function main() {
   })
 
   server.listen(PORT, () => {
-    console.log(
-      `[openloo] sync server on :${PORT} — auth ${AUTH_REQUIRED ? 'ON' : 'OFF'}, data in ${DATA_DIR}`,
-    )
+    const mode = needsSetup()
+      ? 'SETUP (waiting for a passcode to be created)'
+      : HAS_ENV_PASSCODE
+        ? 'ON (env passcode)'
+        : 'ON (created passcode)'
+    console.log(`[openloo] sync server on :${PORT} — auth ${mode}, data in ${DATA_DIR}`)
   })
 
   // Graceful shutdown so a redeploy does not drop in-flight writes.

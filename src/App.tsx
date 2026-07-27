@@ -5,6 +5,7 @@ import { decodeWebmix, takeImportPayloadFromLocation } from './lib/share'
 import { hostOf } from './lib/url'
 import { Board } from './components/Board'
 import { LoginGate } from './components/LoginGate'
+import { SetupGate } from './components/SetupGate'
 import { Notices } from './components/Notices'
 import { SearchBar } from './components/SearchBar'
 import { SettingsDialog } from './components/SettingsDialog'
@@ -69,6 +70,16 @@ export default function App() {
       <div className="flex h-full items-center justify-center text-sm text-[var(--color-ink-muted)]">
         Loading…
       </div>
+    )
+  }
+
+  // A fresh synced instance with no passcode yet: show the setup screen.
+  if (authState === 'setup') {
+    return (
+      <>
+        <SetupGate />
+        <Notices />
+      </>
     )
   }
 

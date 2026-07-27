@@ -9,6 +9,7 @@ interface HealthResponse {
   ok: boolean
   sync: boolean
   authRequired: boolean
+  needsSetup?: boolean
 }
 
 /**
@@ -56,13 +57,16 @@ export class RemoteStorageAdapter implements StorageAdapter {
   constructor(
     private readonly authRequired: boolean,
     private readonly baseUrl = '/api',
+    needsSetup = false,
   ) {
     this.token = localStorage.getItem(TOKEN_KEY)
 
     this.auth = {
       required: authRequired,
+      needsSetup,
       isAuthed: () => !authRequired || this.token !== null,
       login: (passcode) => this.login(passcode),
+      setup: (passcode) => this.setup(passcode),
       logout: () => this.logout(),
     }
   }
@@ -140,10 +144,28 @@ export class RemoteStorageAdapter implements StorageAdapter {
       throw new StorageError('Too many attempts. Wait a few minutes and try again.')
     }
     if (!response.ok) return false
-    const { token } = (await response.json()) as { token: string }
+    this.storeToken((await response.json()) as { token: string })
+    return true
+  }
+
+  /** First-run: create the passcode. The server logs us straight in on success. */
+  private async setup(passcode: string): Promise<boolean> {
+    const response = await fetch(`${this.baseUrl}/setup`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ passcode }),
+    })
+    if (!response.ok) {
+      const body = (await response.json().catch(() => null)) as { error?: string } | null
+      throw new StorageError(body?.error ?? 'Could not create the passcode.')
+    }
+    this.storeToken((await response.json()) as { token: string })
+    return true
+  }
+
+  private storeToken({ token }: { token: string }): void {
     this.token = token
     localStorage.setItem(TOKEN_KEY, token)
-    return true
   }
 
   private async logout(): Promise<void> {

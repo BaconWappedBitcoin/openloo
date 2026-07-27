@@ -33,10 +33,11 @@ export type Status = 'loading' | 'ready' | 'error'
 /**
  * Authentication state, only meaningful when a sync backend is in use.
  *  - `none`: browser-local storage, no auth involved.
+ *  - `setup`: a backend with no passcode yet — the user must create one.
  *  - `required`: a backend that needs a passcode, and we are not signed in.
  *  - `authed`: signed in (or a backend that needs no passcode).
  */
-export type AuthState = 'none' | 'required' | 'authed'
+export type AuthState = 'none' | 'setup' | 'required' | 'authed'
 
 /** Everything the tile editor can specify when creating a tile. */
 export interface NewTileInput {
@@ -73,6 +74,7 @@ interface StoreState {
 
   init(): Promise<void>
   login(passcode: string): Promise<boolean>
+  setupPasscode(passcode: string): Promise<boolean>
   logout(): Promise<void>
   notify(message: string, kind?: Notice['kind']): void
   dismissNotice(id: string): void
@@ -177,20 +179,23 @@ export const useStore = create<StoreState>()((set, get) => {
     async init() {
       // Pick local vs. synced storage by probing the backend, then load.
       adapter = await resolveStorageAdapter()
-      const usesAuth = adapter.auth?.required ?? false
-      set({
-        syncMode: adapter.auth ? 'server' : 'local',
-        storageName: adapter.name,
-        authState: !adapter.auth ? 'none' : usesAuth && !adapter.auth.isAuthed() ? 'required' : 'authed',
-      })
+      const auth = adapter.auth
+      set({ syncMode: auth ? 'server' : 'local', storageName: adapter.name })
 
-      // When a passcode is needed and we do not hold one, stop at the gate
-      // instead of loading; the UI shows a sign-in screen.
-      if (adapter.auth?.required && !adapter.auth.isAuthed()) {
-        set({ status: 'ready' })
+      // First run on a synced instance with no passcode yet: show the setup
+      // screen and go no further until one is created.
+      if (auth?.needsSetup) {
+        set({ authState: 'setup', status: 'ready' })
         return
       }
 
+      // A passcode exists but we do not hold a session: show the sign-in gate.
+      if (auth?.required && !auth.isAuthed()) {
+        set({ authState: 'required', status: 'ready' })
+        return
+      }
+
+      set({ authState: auth ? 'authed' : 'none' })
       await loadData()
       wireSubscription()
     },
@@ -207,6 +212,24 @@ export const useStore = create<StoreState>()((set, get) => {
       } catch (error) {
         get().notify(
           error instanceof StorageError ? error.message : 'Could not sign in.',
+          'error',
+        )
+        return false
+      }
+    },
+
+    async setupPasscode(passcode) {
+      const auth = adapter.auth
+      if (!auth) return false
+      try {
+        const ok = await auth.setup(passcode)
+        if (!ok) return false
+        await loadData()
+        wireSubscription()
+        return true
+      } catch (error) {
+        get().notify(
+          error instanceof StorageError ? error.message : 'Could not create the passcode.',
           'error',
         )
         return false

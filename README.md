@@ -62,16 +62,17 @@ uses it; otherwise it stays local. Same build, either way.
 ### Docker (recommended for self-hosting)
 
 This brings up two containers — the web frontend and the sync server — with
-cross-device sync enabled. Set a passcode first:
+cross-device sync enabled:
 
 ```bash
-cp .env.example .env
-# edit .env and set OPENLOO_PASSCODE to something long
 docker compose up -d
 ```
 
-Then open <http://localhost:8086> and unlock with your passcode. Boards now sync
-to every device that signs in.
+Then open <http://localhost:8086>. On first launch it shows a **Create passcode**
+screen; set one and you are in. Boards then sync to every device that unlocks
+with it. (Prefer to set the passcode up front instead? `cp .env.example .env`
+and set `OPENLOO_PASSCODE` before starting — then first launch goes straight to
+the unlock screen.)
 
 Both containers run non-root with a read-only root filesystem, all Linux
 capabilities dropped, and a restrictive Content-Security-Policy. The sync server
@@ -171,11 +172,14 @@ there are no accounts, matching "my dashboard, on all my devices" rather than
 "a service for many users". Every device that enters the passcode reads and
 writes the same document; changes made on one appear on the others.
 
-**Signing in.** Set `OPENLOO_PASSCODE` in `.env` before starting (see the
-[Docker](#docker-recommended-for-self-hosting) section). Each device asks for it
-once. It is the whole login — pick something long. There is a short lockout
-after repeated wrong guesses, the passcode is only ever compared as a hash in
-constant time, and it is never written to disk.
+**Signing in.** On a fresh instance the first visitor sets the passcode through
+a **Create passcode** screen (or you can set `OPENLOO_PASSCODE` in `.env` up
+front). Until a passcode exists the sync store refuses all data access, so a
+fresh instance is never briefly readable — set it promptly on a reachable
+network. After that, each device asks for the passcode once. It is the whole
+login — pick something long. There is a short lockout after repeated wrong
+guesses, the passcode is only ever compared as a salted hash in constant time,
+and the plaintext is never written to disk.
 
 **Concurrency.** Each save carries a revision number; if another device saved
 first, the write is rejected and the newer version is loaded rather than being

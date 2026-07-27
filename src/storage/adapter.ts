@@ -56,9 +56,13 @@ export class AuthRequiredError extends StorageError {
 export interface AuthController {
   /** Whether the backend demands a passcode at all. */
   readonly required: boolean
+  /** True when no passcode exists yet and one must be created (first run). */
+  readonly needsSetup: boolean
   /** Whether a valid credential is currently held. */
   isAuthed(): boolean
   /** Exchange a passcode for a session; resolves true on success. */
   login(passcode: string): Promise<boolean>
+  /** Create the instance passcode on first run; resolves true on success. */
+  setup(passcode: string): Promise<boolean>
   logout(): Promise<void>
 }
