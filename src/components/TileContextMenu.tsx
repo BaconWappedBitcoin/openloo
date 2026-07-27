@@ -1,5 +1,6 @@
 import { useEffect, useRef, type ReactNode } from 'react'
 import type { Settings, Tile } from '../types'
+import { copyText } from '../lib/clipboard'
 import { buildSearchUrl } from '../lib/searchEngines'
 import { useStore } from '../store/useStore'
 
@@ -60,12 +61,8 @@ export function TileContextMenu({ menu, settings, onEdit, onClose }: TileContext
   }
 
   async function copyLink() {
-    try {
-      await navigator.clipboard.writeText(tile.url)
-      notify('Link copied.')
-    } catch {
-      notify('Could not copy the link.', 'error')
-    }
+    const ok = await copyText(tile.url)
+    notify(ok ? 'Link copied.' : 'Could not copy the link.', ok ? 'info' : 'error')
     onClose()
   }
 

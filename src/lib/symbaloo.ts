@@ -14,10 +14,19 @@
  * Deliberately written without backslashes so it survives copy/paste intact.
  */
 export const SYMBALOO_EXPORT_SNIPPET = `(async () => {
-  const entry = performance.getEntriesByType('resource')
-    .find(e => e.name.indexOf('/cache/user/') > -1 && e.name.indexOf('/desktop/') > -1);
-  if (!entry) { alert('Open your Symbaloo webmix in this tab first, then run this again.'); return; }
-  const data = await (await fetch(entry.name)).json();
+  const entries = performance.getEntriesByType('resource')
+    .filter(e => e.name.indexOf('/cache/user/') > -1 && e.name.indexOf('/desktop/') > -1);
+  if (!entries.length) { alert('Open your Symbaloo webmix in this tab first (so its tiles are visible), then run this again.'); return; }
+  let data = null;
+  for (const e of entries) {
+    try {
+      // cache:'reload' forces a fresh response — a stale/304 one has no body.
+      const res = await fetch(e.name, { cache: 'reload', credentials: 'include' });
+      const text = await res.text();
+      if (res.ok && text) { const j = JSON.parse(text); if (j && Array.isArray(j.smarks)) { data = j; break; } }
+    } catch (err) { /* try the next candidate */ }
+  }
+  if (!data) { alert('Could not read your Symbaloo webmix. Reload the Symbaloo page, wait for the tiles to appear, then run this again.'); return; }
   const tiles = (data.smarks || [])
     .filter(s => s.typed && s.typed.url)
     .map(s => {
@@ -33,5 +42,5 @@ export const SYMBALOO_EXPORT_SNIPPET = `(async () => {
   a.href = URL.createObjectURL(blob);
   a.download = (data.name || 'symbaloo').replace(/[^a-z0-9]+/gi, '-').toLowerCase() + '-openloo.json';
   a.click();
-  alert('Downloaded ' + tiles.length + ' tiles. Now import that file into OpenLoo (Share -> Import).');
+  alert('Downloaded ' + tiles.length + ' tiles. Now import that file into OpenLoo (Import/Export -> Import).');
 })();`

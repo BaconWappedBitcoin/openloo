@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import type { AppData, Webmix } from '../types'
 import { buildShareUrl, encodeWebmix, SHARE_LENGTH_WARNING } from '../lib/share'
 import { dateStamp, downloadJson, pickJsonFile } from '../lib/files'
+import { copyText } from '../lib/clipboard'
 import { sanitizeAppData, sanitizeWebmix } from '../lib/sanitize'
 import { SYMBALOO_EXPORT_SNIPPET } from '../lib/symbaloo'
 import { useStore } from '../store/useStore'
@@ -31,21 +32,15 @@ export function ShareDialog({ webmix, data, onClose }: ShareDialogProps) {
 
   async function copyLink() {
     if (!shareUrl) return
-    try {
-      await navigator.clipboard.writeText(shareUrl)
-      notify('Link copied.')
-    } catch {
-      notify('Could not copy automatically — select the link and copy it.', 'error')
-    }
+    const ok = await copyText(shareUrl)
+    if (ok) notify('Link copied.')
+    else notify('Could not copy — select the link and copy it.', 'error')
   }
 
   async function copySnippet() {
-    try {
-      await navigator.clipboard.writeText(SYMBALOO_EXPORT_SNIPPET)
-      notify("Snippet copied — paste it into Symbaloo's console.")
-    } catch {
-      notify('Could not copy automatically — select the snippet and copy it.', 'error')
-    }
+    const ok = await copyText(SYMBALOO_EXPORT_SNIPPET)
+    if (ok) notify("Snippet copied — paste it into Symbaloo's console.")
+    else notify('Could not copy — select the snippet text and copy it.', 'error')
   }
 
   async function importFile() {
@@ -124,9 +119,19 @@ export function ShareDialog({ webmix, data, onClose }: ShareDialogProps) {
             Come back here and use <strong>Import → Choose a file…</strong> above to load it.
           </li>
         </ol>
-        <pre className="max-h-28 overflow-auto rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-2 text-[10px] leading-tight whitespace-pre-wrap">
-          {SYMBALOO_EXPORT_SNIPPET}
-        </pre>
+        <textarea
+          readOnly
+          value={SYMBALOO_EXPORT_SNIPPET}
+          onFocus={(event) => event.currentTarget.select()}
+          rows={6}
+          spellCheck={false}
+          aria-label="Symbaloo export snippet"
+          className="w-full resize-none rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-2 font-mono text-[10px] leading-tight"
+        />
+        <p className="mt-1 text-[11px] text-[var(--color-ink-muted)]">
+          Click the box to select all, or use the button. (If copy fails on an http instance,
+          select the text and copy it manually.)
+        </p>
         <Button className="mt-2" onClick={() => void copySnippet()}>
           Copy snippet
         </Button>
