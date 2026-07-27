@@ -54,7 +54,21 @@ export function ShareDialog({ webmix, data, onClose }: ShareDialogProps) {
       return
     }
 
-    // A file can be either a full backup or a single exported webmix.
+    // An array of Openmixes (e.g. the Symbaloo export): add each to the current
+    // profile without touching anything else.
+    if (Array.isArray(parsed)) {
+      const mixes = parsed.map(sanitizeWebmix).filter((mix): mix is NonNullable<typeof mix> => mix !== null)
+      if (mixes.length === 0) {
+        notify('Could not read any Openmixes from that file.', 'error')
+        return
+      }
+      mixes.forEach(importWebmix)
+      notify(`Imported ${mixes.length} Openmix${mixes.length === 1 ? '' : 'es'}.`)
+      onClose()
+      return
+    }
+
+    // A full backup replaces everything (with confirmation).
     const backup = sanitizeAppData(parsed)
     if (backup) {
       if (
@@ -67,6 +81,7 @@ export function ShareDialog({ webmix, data, onClose }: ShareDialogProps) {
       return
     }
 
+    // Otherwise a single exported Openmix.
     const single = sanitizeWebmix(parsed)
     if (single) {
       importWebmix(single)
@@ -109,12 +124,16 @@ export function ShareDialog({ webmix, data, onClose }: ShareDialogProps) {
       <section>
         <h3 className="mb-1 text-sm font-semibold">Migrate from Symbaloo</h3>
         <p className="mb-2.5 text-xs text-[var(--color-ink-muted)]">
-          Symbaloo has no export, so this pulls a webmix out from Symbaloo's own page. Open your
-          Symbaloo webmix in another tab, then:
+          Symbaloo has no export, so this pulls <strong>all your webmixes</strong> out from
+          Symbaloo's own page and imports them here without touching your existing boards. Open
+          Symbaloo in another tab, then:
         </p>
         <ol className="mb-2.5 list-decimal space-y-1 pl-5 text-xs text-[var(--color-ink-muted)]">
           <li>On the Symbaloo tab, open the browser console (F12 → Console).</li>
-          <li>Paste the snippet below and press Enter — a JSON file downloads.</li>
+          <li>
+            Paste the snippet below and press Enter. It steps through each of your webmix tabs
+            (the view will change as it does), then downloads one JSON file.
+          </li>
           <li>
             Come back here and use <strong>Import → Choose a file…</strong> above to load it.
           </li>

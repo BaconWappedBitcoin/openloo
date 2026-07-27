@@ -1,4 +1,8 @@
-/** Tile palette — saturated enough to read as a colour block, dark enough for white text. */
+/**
+ * Tile palette. Text colour is chosen per tile against the background (see
+ * `readableTextColor`), so a light swatch like white still gets dark, legible
+ * text. White is included because many imported (e.g. Symbaloo) tiles are white.
+ */
 export const PALETTE = [
   '#e5484d', // red
   '#e5533d', // vermilion
@@ -14,6 +18,7 @@ export const PALETTE = [
   '#d6409f', // pink
   '#64748b', // slate
   '#1f2937', // graphite
+  '#ffffff', // white
 ] as const
 
 /** Deterministic colour choice so a given URL always gets the same tile hue. */
