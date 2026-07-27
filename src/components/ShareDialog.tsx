@@ -86,34 +86,7 @@ export function ShareDialog({ webmix, data, onClose }: ShareDialogProps) {
   const tooLong = shareUrl !== null && shareUrl.length > SHARE_LENGTH_WARNING
 
   return (
-    <Modal title="Share, export and import" onClose={onClose} wide>
-      <section className="mb-6">
-        <h3 className="mb-1 text-sm font-semibold">Share “{webmix.name}” as a link</h3>
-        <p className="mb-2.5 text-xs text-[var(--color-ink-muted)]">
-          The whole webmix is packed into the link itself — there is no server holding a copy.
-          Anyone with the link can open it and add it to their own dashboard.
-        </p>
-        <div className="flex gap-2">
-          <input
-            readOnly
-            value={shareUrl ?? 'Preparing link…'}
-            onFocus={(event) => event.currentTarget.select()}
-            className={inputClass}
-            aria-label="Shareable link"
-          />
-          <Button variant="primary" onClick={copyLink} disabled={!shareUrl}>
-            Copy
-          </Button>
-        </div>
-        {tooLong ? (
-          <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
-            This link is long ({shareUrl?.length.toLocaleString()} characters) because the webmix
-            has many tiles or an uploaded icon. Some chat apps will truncate it — exporting a file
-            is more reliable.
-          </p>
-        ) : null}
-      </section>
-
+    <Modal title="Import, export &amp; share" onClose={onClose} wide>
       <section className="mb-6">
         <h3 className="mb-1 text-sm font-semibold">Export</h3>
         <p className="mb-2.5 text-xs text-[var(--color-ink-muted)]">
@@ -157,6 +130,33 @@ export function ShareDialog({ webmix, data, onClose }: ShareDialogProps) {
         <Button className="mt-2" onClick={() => void copySnippet()}>
           Copy snippet
         </Button>
+      </section>
+
+      <section className="mt-6 border-t border-[var(--color-line)] pt-4">
+        <h3 className="mb-1 text-sm font-semibold">Share “{webmix.name}” as a link</h3>
+        <p className="mb-2.5 text-xs text-[var(--color-ink-muted)]">
+          The whole Openmix is packed into the link itself — there is no server holding a copy.
+          Anyone with the link can open it and add it to their own dashboard.
+        </p>
+        <div className="flex gap-2">
+          <input
+            readOnly
+            value={shareUrl ?? 'Preparing link…'}
+            onFocus={(event) => event.currentTarget.select()}
+            className={inputClass}
+            aria-label="Shareable link"
+          />
+          <Button variant="primary" onClick={copyLink} disabled={!shareUrl}>
+            Copy
+          </Button>
+        </div>
+        {tooLong ? (
+          <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
+            This link is long ({shareUrl?.length.toLocaleString()} characters) because the Openmix
+            has many tiles or an uploaded icon. Some chat apps will truncate it — exporting a file
+            is more reliable.
+          </p>
+        ) : null}
       </section>
     </Modal>
   )

@@ -4,6 +4,7 @@ import type { IconSpec, Settings, Tile, Webmix } from '../types'
 import { useStore } from '../store/useStore'
 import { safeLinkUrl, suggestTitle } from '../lib/url'
 import type { BoardMetrics } from '../hooks/useBoardMetrics'
+import { TileContextMenu, type TileMenuState } from './TileContextMenu'
 import { TileFace, tileLabel } from './TileView'
 
 interface BoardProps {
@@ -48,6 +49,12 @@ export function Board({
   const notify = useStore((state) => state.notify)
   const gridRef = useRef<HTMLDivElement>(null)
   const [urlDropActive, setUrlDropActive] = useState(false)
+  const [menu, setMenu] = useState<TileMenuState | null>(null)
+
+  function openMenu(tile: Tile, event: React.MouseEvent) {
+    event.preventDefault()
+    setMenu({ tile, x: event.clientX, y: event.clientY })
+  }
 
   // Drop a link (from the address bar, another tab, a bookmark, or selected
   // text) anywhere on the board to make a tile — no edit mode needed. This is
@@ -102,8 +109,9 @@ export function Board({
   }
 
   return (
-    // `overflow-auto` matters on small screens: once a cell would fall below the
-    // legible minimum the board stops shrinking and scrolls instead.
+    <>
+    {/* `overflow-auto` matters on small screens: once a cell would fall below the
+        legible minimum the board stops shrinking and scrolls instead. */}
     <div
       ref={containerRef}
       onDragOver={onUrlDragOver}
@@ -131,13 +139,16 @@ export function Board({
             onClick={() => onAddTileAt({ x, y })}
             aria-label={`Add a tile at column ${x + 1}, row ${y + 1}`}
             title="Add a tile"
-            className="group/add absolute flex items-center justify-center border border-dashed border-[var(--color-line)] text-[var(--color-ink-muted)] opacity-25 transition hover:border-blue-400 hover:bg-blue-500/5 hover:text-blue-500 hover:opacity-100"
+            className="group/add absolute flex items-center justify-center text-[var(--color-ink-muted)] shadow-sm transition hover:text-blue-500"
             style={{
               left: x * step,
               top: y * step,
               width: cell,
               height: cell,
               borderRadius: settings.tileRadius,
+              // A filled blank "slot" with the same shadow as a real tile, so
+              // empty cells read as placeholders rather than gaps.
+              backgroundColor: 'color-mix(in srgb, var(--color-ink) 8%, transparent)',
             }}
           >
             <span className="text-2xl opacity-0 transition group-hover/add:opacity-100">+</span>
@@ -154,10 +165,21 @@ export function Board({
             editMode={editMode}
             dimmed={draggingId === tile.id}
             onEdit={() => onEditTile(tile)}
+            onContext={(event) => openMenu(tile, event)}
           />
         ))}
       </div>
     </div>
+
+    {menu ? (
+      <TileContextMenu
+        menu={menu}
+        settings={settings}
+        onEdit={onEditTile}
+        onClose={() => setMenu(null)}
+      />
+    ) : null}
+    </>
   )
 }
 
@@ -169,9 +191,10 @@ interface BoardTileProps {
   editMode: boolean
   dimmed: boolean
   onEdit(): void
+  onContext(event: React.MouseEvent): void
 }
 
-function BoardTile({ tile, settings, cell, step, editMode, dimmed, onEdit }: BoardTileProps) {
+function BoardTile({ tile, settings, cell, step, editMode, dimmed, onEdit, onContext }: BoardTileProps) {
   const moveTile = useStore((state) => state.moveTile)
   const removeTile = useStore((state) => state.removeTile)
   const { attributes, listeners, setNodeRef } = useDraggable({
@@ -216,6 +239,7 @@ function BoardTile({ tile, settings, cell, step, editMode, dimmed, onEdit }: Boa
           {...attributes}
           onClick={onEdit}
           onKeyDown={onKeyDown}
+          onContextMenu={onContext}
           aria-label={`Edit ${tile.title}. Arrow keys to move, or drag onto an Openmix tab.`}
           className="h-full w-full cursor-grab touch-none active:cursor-grabbing"
         >
@@ -249,6 +273,7 @@ function BoardTile({ tile, settings, cell, step, editMode, dimmed, onEdit }: Boa
       // start a URL drag that the board's own drop handler would turn into a
       // duplicate tile. Moving tiles is an edit-mode action (pointer-based).
       draggable={false}
+      onContextMenu={onContext}
       title={tileLabel(tile)}
       className="absolute transition-transform hover:scale-[1.04]"
       style={style}

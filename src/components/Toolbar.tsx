@@ -58,8 +58,8 @@ export function Toolbar({
           + Tile
         </ToolbarButton>
 
-        <ToolbarButton onClick={onOpenShare} label="Share or export this Openmix">
-          Share
+        <ToolbarButton onClick={onOpenShare} label="Import, export, share or migrate">
+          Import/Export
         </ToolbarButton>
 
         <button
