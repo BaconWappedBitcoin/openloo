@@ -21,6 +21,8 @@ follows you between devices, OpenLoo is not that — see
 ## Features
 
 - **Grid of tiles** — 1×1 up to 3×2, drag to rearrange, arrow keys to nudge
+- **Tile icons** — the site's real favicon, a curated set of ready-made icons
+  to pick from, any emoji, or an image you upload
 - **Multiple webmixes** — tabs along the bottom, one board each
 - **Local profiles** — separate sets of boards in one browser (work, home, kids)
 - **Search bar** — DuckDuckGo, Startpage, Brave, Google, Bing, Ecosia, Wikipedia,
@@ -95,8 +97,9 @@ Self-hosting a dashboard that quietly phoned home would defeat the point, so:
 - **Favicon fetching is off by default.** Asking DuckDuckGo or Google for a
   site's icon tells them which sites you have bookmarked. With the default
   setting of `None`, OpenLoo makes **no third-party requests at all** — tiles
-  fall back to initials, an emoji, or an image you upload. You can opt into a
-  provider in Settings, and the trade-off is spelled out there too.
+  fall back to initials, a ready-made icon, an emoji, or an image you upload.
+  Choosing the "Favicon" icon while it is off shows the trade-off inline and
+  lets you enable it in one click, so the choice is informed rather than buried.
 - **Share links contain the board itself**, in the URL fragment. Fragments are
   never sent to a server, so even the host serving the app does not see what
   you shared.

@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
-import type { IconSpec, Tile } from '../types'
+import type { IconProvider, IconSpec, Tile } from '../types'
 import { PALETTE } from '../lib/colors'
+import { faviconUrl } from '../lib/favicon'
 import { safeImageUrl, safeLinkUrl, suggestTitle } from '../lib/url'
 import { useStore } from '../store/useStore'
+import { IconPicker } from './IconPicker'
 import { Button, Field, inputClass, Modal } from './Modal'
 
 /** Uploaded icons live in localStorage, so keep them small. */
@@ -27,6 +29,8 @@ export function TileEditor({ draft, maxW, maxH, onClose }: TileEditorProps) {
   const removeTile = useStore((state) => state.removeTile)
   const setTileSize = useStore((state) => state.setTileSize)
   const notify = useStore((state) => state.notify)
+  const iconProvider = useStore((state) => state.data.settings.iconProvider)
+  const updateSettings = useStore((state) => state.updateSettings)
 
   const [url, setUrl] = useState(existing?.url ?? '')
   const [title, setTitle] = useState(existing?.title ?? '')
@@ -171,14 +175,7 @@ export function TileEditor({ draft, maxW, maxH, onClose }: TileEditorProps) {
         </div>
       </Field>
 
-      <Field
-        label="Icon"
-        hint={
-          icon.kind === 'favicon'
-            ? 'Favicons are fetched from the provider set in Settings. With the default of "None", this falls back to initials.'
-            : undefined
-        }
-      >
+      <Field label="Icon">
         <div className="flex flex-wrap gap-2">
           <IconChoice active={icon.kind === 'letter'} onClick={() => setIcon({ kind: 'letter' })}>
             Initials
@@ -188,9 +185,11 @@ export function TileEditor({ draft, maxW, maxH, onClose }: TileEditorProps) {
           </IconChoice>
           <IconChoice
             active={icon.kind === 'emoji'}
-            onClick={() => setIcon({ kind: 'emoji', char: icon.kind === 'emoji' ? icon.char : '⭐' })}
+            onClick={() =>
+              setIcon({ kind: 'emoji', char: icon.kind === 'emoji' ? icon.char : '⭐' })
+            }
           >
-            Emoji
+            Choose icon
           </IconChoice>
           <label className="cursor-pointer rounded-lg border border-[var(--color-line)] px-3 py-1.5 text-sm hover:bg-[var(--color-surface)]">
             Upload…
@@ -206,13 +205,18 @@ export function TileEditor({ draft, maxW, maxH, onClose }: TileEditorProps) {
           </label>
         </div>
 
+        {icon.kind === 'favicon' ? (
+          <FaviconPreview
+            url={url}
+            provider={iconProvider}
+            onEnableProvider={() => updateSettings({ iconProvider: 'duckduckgo' })}
+          />
+        ) : null}
+
         {icon.kind === 'emoji' ? (
-          <input
-            className={`${inputClass} mt-2`}
-            value={icon.char}
-            onChange={(event) => setIcon({ kind: 'emoji', char: event.target.value.slice(0, 8) })}
-            placeholder="Paste an emoji"
-            aria-label="Emoji"
+          <IconPicker
+            selected={icon.char}
+            onPick={(char) => setIcon({ kind: 'emoji', char })}
           />
         ) : null}
 
@@ -286,6 +290,76 @@ function IconChoice({
     >
       {children}
     </button>
+  )
+}
+
+/**
+ * Live favicon preview inside the tile editor.
+ *
+ * Favicon lookup is a third-party request that reveals which sites you
+ * bookmark, so it stays off by default. Rather than silently falling back to
+ * initials — which reads as "the feature is broken" — this states the
+ * trade-off and offers to turn it on right here, so the choice is informed and
+ * one click away instead of buried in Settings.
+ */
+function FaviconPreview({
+  url,
+  provider,
+  onEnableProvider,
+}: {
+  url: string
+  provider: IconProvider
+  onEnableProvider(): void
+}) {
+  const [failed, setFailed] = useState(false)
+  const src = safeLinkUrl(url) ? faviconUrl(url, provider) : null
+
+  // Re-attempt the image whenever the address or provider changes.
+  useEffect(() => setFailed(false), [url, provider])
+
+  if (provider === 'none') {
+    return (
+      <div className="mt-2 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-3 text-xs">
+        <p className="mb-2 text-[var(--color-ink-muted)]">
+          Favicon lookup is off for privacy — fetching an icon tells the provider
+          which sites you bookmark. Turn it on to show real site icons.
+        </p>
+        <Button onClick={onEnableProvider}>Enable via DuckDuckGo</Button>
+      </div>
+    )
+  }
+
+  if (!src) {
+    return (
+      <p className="mt-2 text-xs text-[var(--color-ink-muted)]">
+        Enter a valid address above to preview its favicon.
+      </p>
+    )
+  }
+
+  return (
+    <div className="mt-2 flex items-center gap-3 rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-3">
+      {failed ? (
+        <span className="text-xs text-[var(--color-ink-muted)]">
+          No favicon found for this site — tiles will fall back to initials.
+        </span>
+      ) : (
+        <>
+          <img
+            src={src}
+            alt=""
+            width={32}
+            height={32}
+            referrerPolicy="no-referrer"
+            onError={() => setFailed(true)}
+            className="h-8 w-8 rounded object-contain"
+          />
+          <span className="text-xs text-[var(--color-ink-muted)]">
+            Live icon from {provider === 'duckduckgo' ? 'DuckDuckGo' : 'Google'}.
+          </span>
+        </>
+      )}
+    </div>
   )
 }
 
