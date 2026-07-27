@@ -10,15 +10,33 @@ import {
   resizeTile,
 } from '../lib/grid'
 import { newId } from '../lib/id'
-import { createStorageAdapter, StorageError } from '../storage'
+import {
+  AuthRequiredError,
+  LocalStorageAdapter,
+  resolveStorageAdapter,
+  StorageError,
+  type StorageAdapter,
+} from '../storage'
 
-const adapter = createStorageAdapter()
+// The active adapter, resolved during init(). Defaults to local so anything
+// that reads it before init (it shouldn't) degrades gracefully rather than
+// crashing. `let` because init() swaps in the real one once the backend probe
+// completes; the persistence subscription below reads it lazily at save time.
+let adapter: StorageAdapter = new LocalStorageAdapter()
 
 /** How long to coalesce rapid edits before writing to storage. */
 const SAVE_DEBOUNCE_MS = 250
 const MAX_HISTORY = 40
 
 export type Status = 'loading' | 'ready' | 'error'
+
+/**
+ * Authentication state, only meaningful when a sync backend is in use.
+ *  - `none`: browser-local storage, no auth involved.
+ *  - `required`: a backend that needs a passcode, and we are not signed in.
+ *  - `authed`: signed in (or a backend that needs no passcode).
+ */
+export type AuthState = 'none' | 'required' | 'authed'
 
 /** Everything the tile editor can specify when creating a tile. */
 export interface NewTileInput {
@@ -47,7 +65,15 @@ interface StoreState {
   editMode: boolean
   notices: Notice[]
 
+  /** How persistence is happening: local browser storage, or a synced server. */
+  syncMode: 'local' | 'server'
+  /** Human label for the active adapter, shown in settings. */
+  storageName: string
+  authState: AuthState
+
   init(): Promise<void>
+  login(passcode: string): Promise<boolean>
+  logout(): Promise<void>
   notify(message: string, kind?: Notice['kind']): void
   dismissNotice(id: string): void
   undo(): void
@@ -109,32 +135,89 @@ export const useStore = create<StoreState>()((set, get) => {
     }, recordHistory)
   }
 
+  /** Load the document and move to `ready`; used after init and after login. */
+  async function loadData(): Promise<void> {
+    try {
+      const stored = await adapter.load()
+      set({ data: stored ?? createInitialData(), status: 'ready', authState: 'authed' })
+    } catch (error) {
+      if (error instanceof AuthRequiredError) {
+        // The backend wants a passcode we do not have; show the gate.
+        set({ authState: 'required', status: 'ready' })
+        return
+      }
+      // Storage being unavailable is recoverable: run in memory and say so.
+      set({ data: createInitialData(), status: 'ready' })
+      get().notify(
+        error instanceof StorageError
+          ? `${error.message} Changes will be lost when you close this tab.`
+          : 'Could not read saved data. Starting fresh.',
+        'error',
+      )
+    }
+  }
+
+  function wireSubscription(): void {
+    adapter.subscribe?.((incoming) => {
+      // Another tab or device wrote; adopt its state rather than fight over it.
+      set({ data: incoming })
+    })
+  }
+
   return {
     data: createInitialData(),
     status: 'loading',
     history: [],
     editMode: false,
     notices: [],
+    syncMode: 'local',
+    storageName: 'This browser',
+    authState: 'none',
 
     async init() {
-      try {
-        const stored = await adapter.load()
-        set({ data: stored ?? createInitialData(), status: 'ready' })
-      } catch (error) {
-        // Storage being unavailable is recoverable: run in memory and say so.
-        set({ data: createInitialData(), status: 'ready' })
-        get().notify(
-          error instanceof StorageError
-            ? `${error.message} Changes will be lost when you close this tab.`
-            : 'Could not read saved data. Starting fresh.',
-          'error',
-        )
+      // Pick local vs. synced storage by probing the backend, then load.
+      adapter = await resolveStorageAdapter()
+      const usesAuth = adapter.auth?.required ?? false
+      set({
+        syncMode: adapter.auth ? 'server' : 'local',
+        storageName: adapter.name,
+        authState: !adapter.auth ? 'none' : usesAuth && !adapter.auth.isAuthed() ? 'required' : 'authed',
+      })
+
+      // When a passcode is needed and we do not hold one, stop at the gate
+      // instead of loading; the UI shows a sign-in screen.
+      if (adapter.auth?.required && !adapter.auth.isAuthed()) {
+        set({ status: 'ready' })
+        return
       }
 
-      adapter.subscribe?.((incoming) => {
-        // Another tab wrote; adopt its state rather than fighting over the key.
-        set({ data: incoming })
-      })
+      await loadData()
+      wireSubscription()
+    },
+
+    async login(passcode) {
+      const auth = adapter.auth
+      if (!auth) return false
+      try {
+        const ok = await auth.login(passcode)
+        if (!ok) return false
+        await loadData()
+        wireSubscription()
+        return true
+      } catch (error) {
+        get().notify(
+          error instanceof StorageError ? error.message : 'Could not sign in.',
+          'error',
+        )
+        return false
+      }
+    },
+
+    async logout() {
+      await adapter.auth?.logout()
+      // Drop back to the gate with a clean slate so the previous data is not
+      // left on screen for the next person.
+      set({ authState: 'required', data: createInitialData(), history: [] })
     },
 
     notify(message, kind = 'info') {
@@ -422,6 +505,9 @@ let lastSaved: AppData | null = null
 
 useStore.subscribe((state, previous) => {
   if (state.status !== 'ready' || state.data === previous.data) return
+  // Do not try to save while sitting at the passcode gate — there is no
+  // credential, and the on-screen data is just the placeholder initial doc.
+  if (state.authState === 'required') return
   clearTimeout(saveTimer)
   saveTimer = setTimeout(() => {
     const { data } = useStore.getState()
@@ -432,6 +518,13 @@ useStore.subscribe((state, previous) => {
         lastSaved = data
       })
       .catch((error: unknown) => {
+        if (error instanceof AuthRequiredError) {
+          // The session expired mid-edit. Return to the gate rather than
+          // spamming save failures; the user re-enters the passcode to resume.
+          useStore.setState({ authState: 'required' })
+          useStore.getState().notify('Your session expired — please sign in again.', 'error')
+          return
+        }
         useStore
           .getState()
           .notify(

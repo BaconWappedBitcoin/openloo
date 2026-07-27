@@ -36,7 +36,7 @@ export function TileEditor({ draft, maxW, maxH, onClose }: TileEditorProps) {
   const [title, setTitle] = useState(existing?.title ?? '')
   const [color, setColor] = useState(existing?.color ?? PALETTE[7])
   const [icon, setIcon] = useState<IconSpec>(existing?.icon ?? { kind: 'letter' })
-  const [openInNewTab, setOpenInNewTab] = useState(existing?.openInNewTab ?? false)
+  const [openInNewTab, setOpenInNewTab] = useState(existing?.openInNewTab ?? true)
   const [size, setSize] = useState({ w: existing?.w ?? 1, h: existing?.h ?? 1 })
   const [urlError, setUrlError] = useState<string | null>(null)
 
@@ -251,11 +251,14 @@ export function TileEditor({ draft, maxW, maxH, onClose }: TileEditorProps) {
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"
-          checked={openInNewTab}
-          onChange={(event) => setOpenInNewTab(event.target.checked)}
+          checked={!openInNewTab}
+          onChange={(event) => setOpenInNewTab(!event.target.checked)}
         />
-        Open in a new tab
+        Open in the same tab
       </label>
+      <p className="mt-1 text-xs text-[var(--color-ink-muted)]">
+        Tiles open in a new tab by default, so your dashboard stays put.
+      </p>
     </Modal>
   )
 }

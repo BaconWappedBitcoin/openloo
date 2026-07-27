@@ -24,10 +24,42 @@ export function SettingsDialog({
   const renameProfile = useStore((state) => state.renameProfile)
   const removeProfile = useStore((state) => state.removeProfile)
   const resetEverything = useStore((state) => state.resetEverything)
+  const syncMode = useStore((state) => state.syncMode)
+  const storageName = useStore((state) => state.storageName)
+  const logout = useStore((state) => state.logout)
   const [newProfileName, setNewProfileName] = useState('')
 
   return (
     <Modal title="Settings" onClose={onClose} wide footer={<Button onClick={onClose}>Done</Button>}>
+      <section className="mb-7">
+        <SectionTitle>Storage</SectionTitle>
+        {syncMode === 'server' ? (
+          <div className="rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-3 text-sm">
+            <p className="mb-1 font-medium text-green-600 dark:text-green-400">
+              ● Synced across your devices
+            </p>
+            <p className="mb-3 text-xs text-[var(--color-ink-muted)]">
+              Boards are saved on this OpenLoo server and stay in sync everywhere you sign in.
+            </p>
+            <Button
+              onClick={() => {
+                if (confirm('Sign out on this device? Your boards stay safe on the server.')) {
+                  void logout()
+                  onClose()
+                }
+              }}
+            >
+              Sign out
+            </Button>
+          </div>
+        ) : (
+          <p className="text-xs text-[var(--color-ink-muted)]">
+            Saved in this browser only ({storageName}). Boards do not sync to other devices —
+            use Share → Export for a backup, or self-host with sync enabled.
+          </p>
+        )}
+      </section>
+
       <section className="mb-7">
         <SectionTitle>Appearance</SectionTitle>
 
@@ -138,15 +170,6 @@ export function SettingsDialog({
             />
           </Field>
         ) : null}
-
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={settings.openInNewTabByDefault}
-            onChange={(event) => updateSettings({ openInNewTabByDefault: event.target.checked })}
-          />
-          Open tiles in a new tab by default
-        </label>
       </section>
 
       <section className="mb-7">

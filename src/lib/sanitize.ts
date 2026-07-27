@@ -110,7 +110,7 @@ function sanitizeTile(value: unknown, cols: number, rows: number): Tile | null {
     h: int(raw.h, 1, rows, 1),
     color: color(raw.color, url),
     icon: icon(raw.icon),
-    openInNewTab: bool(raw.openInNewTab, false),
+    openInNewTab: bool(raw.openInNewTab, true),
   }
 }
 
@@ -208,10 +208,6 @@ function sanitizeSettings(value: unknown): Settings {
     showSearch: bool(raw.showSearch, DEFAULT_SETTINGS.showSearch),
     tileRadius: int(raw.tileRadius, 0, 40, DEFAULT_SETTINGS.tileRadius),
     gap: int(raw.gap, 0, 32, DEFAULT_SETTINGS.gap),
-    openInNewTabByDefault: bool(
-      raw.openInNewTabByDefault,
-      DEFAULT_SETTINGS.openInNewTabByDefault,
-    ),
   }
 }
 

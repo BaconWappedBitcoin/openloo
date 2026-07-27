@@ -1,14 +1,17 @@
 services:
-  openloo:
+  # Static frontend on nginx. Also reverse-proxies /api to the sync service.
+  web:
     build: .
-    image: openloo:latest
-    container_name: openloo
+    image: openloo-web:latest
+    container_name: openloo-web
     ports:
       # host:container. nginx listens on 8080 inside the container; we publish
       # it on 8086 because 8080 is a common port to already have taken. Change
       # the left number to serve OpenLoo on a different host port.
       - '8086:8080'
     restart: unless-stopped
+    depends_on:
+      - api
     read_only: true
     # nginx writes its pid and temp files to /tmp (see docker/nginx.conf), so
     # that single tmpfs is all a read-only container needs. mode 01777 lets the
@@ -22,3 +25,30 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
+
+  # Sync API. Holds one passcode-guarded document on a persistent volume. Not
+  # published to the host — only the web service reaches it, over the internal
+  # compose network.
+  api:
+    build: ./server
+    image: openloo-api:latest
+    container_name: openloo-api
+    restart: unless-stopped
+    environment:
+      # Required. Without a passcode the sync store would be open to anyone who
+      # can reach it. Set it in a .env file next to this one (see .env.example).
+      OPENLOO_PASSCODE: ${OPENLOO_PASSCODE:?Set OPENLOO_PASSCODE (copy .env.example to .env and edit it)}
+      DATA_DIR: /data
+    volumes:
+      - openloo-data:/data
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+volumes:
+  # Your boards and session tokens live here, surviving container rebuilds.
+  openloo-data:

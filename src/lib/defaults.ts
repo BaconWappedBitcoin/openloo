@@ -30,7 +30,7 @@ export function createTile(partial: Partial<Tile> & { url: string }): Tile {
     h: partial.h ?? 1,
     color: partial.color ?? colorForSeed(partial.url),
     icon: partial.icon ?? { kind: 'letter' },
-    openInNewTab: partial.openInNewTab ?? false,
+    openInNewTab: partial.openInNewTab ?? true,
   }
 }
 

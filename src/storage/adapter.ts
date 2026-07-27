@@ -17,10 +17,13 @@ export interface StorageAdapter {
   save(data: AppData): Promise<void>
   clear(): Promise<void>
   /**
-   * Notify when another context (another tab, or a future server push)
-   * changes the data. Returns an unsubscribe function.
+   * Notify when another context (another tab, or a server push) changes the
+   * data. Returns an unsubscribe function.
    */
   subscribe?(onExternalChange: (data: AppData) => void): () => void
+
+  /** Present only on adapters that authenticate against a server. */
+  readonly auth?: AuthController
 }
 
 export class StorageError extends Error {
@@ -31,4 +34,31 @@ export class StorageError extends Error {
     super(message)
     this.name = 'StorageError'
   }
+}
+
+/**
+ * Thrown by a remote adapter when the caller is not (or no longer) signed in.
+ * The store treats this specially: it shows the passcode gate rather than
+ * surfacing it as a generic error.
+ */
+export class AuthRequiredError extends StorageError {
+  constructor(message = 'Sign in required.') {
+    super(message)
+    this.name = 'AuthRequiredError'
+  }
+}
+
+/**
+ * Optional auth surface for adapters that talk to a server. The local adapter
+ * has no `auth`; a remote one exposes this so the store can drive a login gate
+ * without knowing anything about how the backend authenticates.
+ */
+export interface AuthController {
+  /** Whether the backend demands a passcode at all. */
+  readonly required: boolean
+  /** Whether a valid credential is currently held. */
+  isAuthed(): boolean
+  /** Exchange a passcode for a session; resolves true on success. */
+  login(passcode: string): Promise<boolean>
+  logout(): Promise<void>
 }

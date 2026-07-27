@@ -1,16 +1,23 @@
 import { LocalStorageAdapter } from './localAdapter'
+import { probeBackend, RemoteStorageAdapter } from './remoteAdapter'
 import type { StorageAdapter } from './adapter'
 
-export { StorageError } from './adapter'
-export type { StorageAdapter } from './adapter'
+export { AuthRequiredError, StorageError } from './adapter'
+export type { AuthController, StorageAdapter } from './adapter'
 export { LocalStorageAdapter, STORAGE_KEY } from './localAdapter'
+export { RemoteStorageAdapter } from './remoteAdapter'
 
 /**
- * The adapter the app runs against.
+ * Choose the storage backend at runtime.
  *
- * When a server-backed build lands, this is the single place that chooses
- * between implementations (on a build flag or a runtime probe).
+ * The same build runs two ways. Where a sync server answers `/api/health`
+ * (a self-hosted install), reads and writes go to it and the dashboard follows
+ * the user across devices. Where nothing answers — the GitHub Pages demo, or
+ * any plain static host — it falls back to browser-local storage. Probing at
+ * runtime rather than baking the choice in means one artifact serves both.
  */
-export function createStorageAdapter(): StorageAdapter {
+export async function resolveStorageAdapter(): Promise<StorageAdapter> {
+  const health = await probeBackend()
+  if (health) return new RemoteStorageAdapter(health.authRequired)
   return new LocalStorageAdapter()
 }

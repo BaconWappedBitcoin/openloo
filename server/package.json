@@ -1,0 +1,15 @@
+{
+  "name": "openloo-server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "OpenLoo sync server — single-document store with passcode auth. No dependencies.",
+  "license": "MIT",
+  "type": "module",
+  "main": "index.mjs",
+  "scripts": {
+    "start": "node index.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

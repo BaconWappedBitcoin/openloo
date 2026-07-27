@@ -74,8 +74,6 @@ export interface Settings {
   tileRadius: number
   /** Gap between cells in pixels. */
   gap: number
-  /** Open tiles in a new tab unless the tile overrides it. */
-  openInNewTabByDefault: boolean
 }
 
 export interface AppData {
@@ -95,7 +93,6 @@ export const DEFAULT_SETTINGS: Settings = {
   showSearch: true,
   tileRadius: 14,
   gap: 8,
-  openInNewTabByDefault: false,
 }
 
 /** Grid bounds. Kept small enough that a board still fits a laptop screen. */

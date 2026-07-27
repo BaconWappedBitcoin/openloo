@@ -201,7 +201,9 @@ function BoardTile({ tile, settings, cell, step, editMode, dimmed, onEdit }: Boa
   return (
     <a
       href={tile.url}
-      target={tile.openInNewTab || settings.openInNewTabByDefault ? '_blank' : undefined}
+      // A dashboard is a home base, so bookmarks open in a new tab by default
+      // (tile.openInNewTab defaults true). A tile can opt into same-tab.
+      target={tile.openInNewTab ? '_blank' : undefined}
       rel="noopener noreferrer"
       referrerPolicy="no-referrer"
       title={tileLabel(tile)}

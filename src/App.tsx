@@ -4,6 +4,7 @@ import { activeProfileOf, activeWebmixOf, useStore } from './store/useStore'
 import { decodeWebmix, takeImportPayloadFromLocation } from './lib/share'
 import { hostOf } from './lib/url'
 import { Board } from './components/Board'
+import { LoginGate } from './components/LoginGate'
 import { Notices } from './components/Notices'
 import { SearchBar } from './components/SearchBar'
 import { SettingsDialog } from './components/SettingsDialog'
@@ -24,6 +25,7 @@ export default function App() {
   const data = useStore((state) => state.data)
   const status = useStore((state) => state.status)
   const editMode = useStore((state) => state.editMode)
+  const authState = useStore((state) => state.authState)
   const init = useStore((state) => state.init)
   const undo = useStore((state) => state.undo)
   const setEditMode = useStore((state) => state.setEditMode)
@@ -62,7 +64,26 @@ export default function App() {
     onUndo: undo,
   })
 
-  if (status === 'loading' || !profile || !webmix) {
+  if (status === 'loading') {
+    return (
+      <div className="flex h-full items-center justify-center text-sm text-[var(--color-ink-muted)]">
+        Loading…
+      </div>
+    )
+  }
+
+  // A synced instance that needs a passcode we do not hold: show the gate and
+  // nothing else, so no board data is on screen before sign-in.
+  if (authState === 'required') {
+    return (
+      <>
+        <LoginGate />
+        <Notices />
+      </>
+    )
+  }
+
+  if (!profile || !webmix) {
     return (
       <div className="flex h-full items-center justify-center text-sm text-[var(--color-ink-muted)]">
         Loading…
