@@ -1,7 +1,8 @@
-import { useMemo } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useDraggable } from '@dnd-kit/core'
-import type { Settings, Tile, Webmix } from '../types'
+import type { IconSpec, Settings, Tile, Webmix } from '../types'
 import { useStore } from '../store/useStore'
+import { safeLinkUrl, suggestTitle } from '../lib/url'
 import type { BoardMetrics } from '../hooks/useBoardMetrics'
 import { TileFace, tileLabel } from './TileView'
 
@@ -40,14 +41,81 @@ export function Board({
 
   const emptyCells = useMemo(() => (editMode ? findEmptyCells(webmix) : []), [editMode, webmix])
 
+  const addTile = useStore((state) => state.addTile)
+  const notify = useStore((state) => state.notify)
+  const gridRef = useRef<HTMLDivElement>(null)
+  const [urlDropActive, setUrlDropActive] = useState(false)
+
+  // Drop a link (from the address bar, another tab, a bookmark, or selected
+  // text) anywhere on the board to make a tile — no edit mode needed. This is
+  // native HTML5 drag-and-drop, separate from the pointer-based tile dragging.
+  const hasUrlPayload = (dt: DataTransfer) =>
+    dt.types.includes('text/uri-list') || dt.types.includes('text/plain')
+
+  function onUrlDragOver(event: React.DragEvent) {
+    if (!hasUrlPayload(event.dataTransfer)) return
+    event.preventDefault()
+    event.dataTransfer.dropEffect = 'copy'
+    if (!urlDropActive) setUrlDropActive(true)
+  }
+
+  function onUrlDragLeave(event: React.DragEvent) {
+    // Ignore leave events fired when moving between the container's children.
+    if (event.currentTarget.contains(event.relatedTarget as Node | null)) return
+    setUrlDropActive(false)
+  }
+
+  function onUrlDrop(event: React.DragEvent) {
+    if (!hasUrlPayload(event.dataTransfer)) return
+    event.preventDefault()
+    setUrlDropActive(false)
+
+    const raw =
+      event.dataTransfer.getData('text/uri-list') || event.dataTransfer.getData('text/plain')
+    // A uri-list may carry comment lines beginning with '#'; take the first URL.
+    const candidate =
+      raw
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .find((line) => line && !line.startsWith('#')) ?? ''
+    const url = safeLinkUrl(candidate)
+    if (!url) {
+      notify('Drop a web link (http or https) to add a tile.', 'error')
+      return
+    }
+
+    // Place it on the cell it was dropped over, when that lands inside the grid.
+    let position: { x: number; y: number } | undefined
+    const rect = gridRef.current?.getBoundingClientRect()
+    if (rect && step > 0) {
+      const x = Math.floor((event.clientX - rect.left) / step)
+      const y = Math.floor((event.clientY - rect.top) / step)
+      if (x >= 0 && x < webmix.cols && y >= 0 && y < webmix.rows) position = { x, y }
+    }
+
+    const icon: IconSpec =
+      settings.iconProvider !== 'none' ? { kind: 'favicon' } : { kind: 'letter' }
+    addTile({ url, title: suggestTitle(url) || 'Untitled', icon, ...position })
+  }
+
   return (
     // `overflow-auto` matters on small screens: once a cell would fall below the
     // legible minimum the board stops shrinking and scrolls instead.
     <div
       ref={containerRef}
-      className="flex min-h-0 flex-1 items-center justify-center overflow-auto p-4"
+      onDragOver={onUrlDragOver}
+      onDragLeave={onUrlDragLeave}
+      onDrop={onUrlDrop}
+      className="relative flex min-h-0 flex-1 items-center justify-center overflow-auto p-4"
     >
+      {urlDropActive ? (
+        <div className="pointer-events-none absolute inset-2 z-20 flex items-center justify-center rounded-xl border-2 border-dashed border-blue-400 bg-blue-500/10 text-sm font-medium text-blue-500">
+          Drop to add a tile
+        </div>
+      ) : null}
+
       <div
+        ref={gridRef}
         className="relative shrink-0"
         style={{ width: boardWidth, height: boardHeight, visibility: ready ? undefined : 'hidden' }}
         role="grid"
