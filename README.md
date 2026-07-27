@@ -12,15 +12,21 @@ device; nothing is uploaded, and no one else can see them.
 
 ## What it is
 
-OpenLoo is a **static web app**. There is no backend, no database, and no API.
-Your bookmarks live in your browser's local storage and never leave the device
-unless you export them yourself.
+OpenLoo runs two ways from one codebase:
 
-That has a real consequence worth stating up front: **your data is per-browser.**
-It does not sync between your laptop and your phone, and clearing site data
-deletes it. Export a backup if it matters to you. If you want an account that
-follows you between devices, OpenLoo is not that — see
-[Wanting a real backend](#wanting-a-real-backend).
+- **Local (default).** A static web app with no backend. Your bookmarks live in
+  the browser's local storage and never leave the device unless you export them.
+  This is what the [live demo](https://baconwappedbitcoin.github.io/openloo/) and
+  any static host (GitHub Pages, Netlify, an S3 bucket) give you. The trade-off:
+  **data is per-browser** — it does not follow you to another device, and
+  clearing site data deletes it.
+
+- **Synced (opt-in, self-hosted).** Run it with the included sync server and one
+  dashboard follows you across every device and browser, unlocked by a single
+  passcode. See [Sync across your devices](#sync-across-your-devices).
+
+The app detects which mode it is in at runtime: if a sync server answers, it
+uses it; otherwise it stays local. Same build, either way.
 
 ## Features
 
@@ -31,6 +37,8 @@ follows you between devices, OpenLoo is not that — see
 - **Local profiles** — separate sets of boards in one browser (work, home, kids)
 - **Search bar** — DuckDuckGo, Startpage, Brave, Google, Bing, Ecosia, Wikipedia,
   YouTube, or your own `%s` template; typing a bare domain goes straight there
+- **Cross-device sync (optional)** — self-host with the sync server and your
+  boards follow you everywhere, behind one passcode
 - **Share by link** — the whole board is packed into the URL, so there is
   nothing to host
 - **Import / export** — plain JSON, for backups and moving between browsers
@@ -53,16 +61,30 @@ follows you between devices, OpenLoo is not that — see
 
 ### Docker (recommended for self-hosting)
 
+This brings up two containers — the web frontend and the sync server — with
+cross-device sync enabled. Set a passcode first:
+
 ```bash
+cp .env.example .env
+# edit .env and set OPENLOO_PASSCODE to something long
 docker compose up -d
 ```
 
-Then open <http://localhost:8086>. The container runs nginx as a non-root user
-with a read-only filesystem and a restrictive Content-Security-Policy.
+Then open <http://localhost:8086> and unlock with your passcode. Boards now sync
+to every device that signs in.
+
+Both containers run non-root with a read-only root filesystem, all Linux
+capabilities dropped, and a restrictive Content-Security-Policy. The sync server
+is **not** published to the host — only the frontend reaches it, over the
+internal Docker network. Your data lives in the `openloo-data` volume.
 
 The host port defaults to **8086** (8080 is so commonly already in use). Change
 the left-hand number of the `ports` mapping in `docker-compose.yml` to serve it
 elsewhere; nginx always listens on 8080 inside the container.
+
+> Serving over the internet? Put it behind a reverse proxy with HTTPS (the
+> passcode and boards travel in plain HTTP otherwise). On a LAN or a Tailnet,
+> plain HTTP is usually fine.
 
 ### Static files
 
@@ -113,6 +135,9 @@ Self-hosting a dashboard that quietly phoned home would defeat the point, so:
   you shared.
 - **No analytics, no telemetry, no fonts or scripts from a CDN.** The bundle is
   entirely self-contained.
+- **In synced mode, your boards live only on your own server** and are reached
+  same-origin at `/api`. There is no OpenLoo cloud and nothing is sent to any
+  third party — sync talks to the server you run and nothing else.
 
 ### Handling untrusted boards
 
@@ -135,19 +160,33 @@ Unknown fields are discarded rather than passed through. See
 [`src/lib/sanitize.ts`](src/lib/sanitize.ts) and the tests in
 [`tests/sanitize.test.ts`](tests/sanitize.test.ts).
 
-## Wanting a real backend
+## Sync across your devices
 
-Accounts that sync across devices need a server; a static app cannot provide
-them. OpenLoo is built so that adding one does not mean a rewrite: **all
-persistence goes through a single `StorageAdapter` interface**
-([`src/storage/adapter.ts`](src/storage/adapter.ts)), and the shipped
-`LocalStorageAdapter` is one implementation of it. Adding a server-backed
-adapter means writing a new class and switching on it in
-[`src/storage/index.ts`](src/storage/index.ts) — the UI and store are untouched.
+The default local mode keeps boards in one browser. Self-host with the sync
+server and a single dashboard follows you everywhere instead.
 
-The interface is already async and has an optional `subscribe` hook for
-external changes (used today to keep two open tabs in sync), so a networked
-implementation is a drop-in rather than a refactor.
+**How it works.** The `docker compose` stack runs a tiny sync server alongside
+the frontend. It holds **one** dashboard document guarded by **one** passcode —
+there are no accounts, matching "my dashboard, on all my devices" rather than
+"a service for many users". Every device that enters the passcode reads and
+writes the same document; changes made on one appear on the others.
+
+**Signing in.** Set `OPENLOO_PASSCODE` in `.env` before starting (see the
+[Docker](#docker-recommended-for-self-hosting) section). Each device asks for it
+once. It is the whole login — pick something long. There is a short lockout
+after repeated wrong guesses, the passcode is only ever compared as a hash in
+constant time, and it is never written to disk.
+
+**Concurrency.** Each save carries a revision number; if another device saved
+first, the write is rejected and the newer version is loaded rather than being
+silently overwritten. So two devices editing at once cannot clobber each other.
+
+**Design.** This did not require rewriting the app. All persistence goes through
+one `StorageAdapter` interface ([`src/storage/adapter.ts`](src/storage/adapter.ts));
+the local and remote backends are two implementations, and
+[`src/storage/index.ts`](src/storage/index.ts) probes `/api/health` at runtime to
+pick between them. The sync server itself
+([`server/index.mjs`](server/index.mjs)) is dependency-free Node.
 
 ## Architecture
 
@@ -155,10 +194,11 @@ implementation is a drop-in rather than a refactor.
 src/
   types.ts          Data model — no React, no DOM
   lib/              Pure logic: grid math, sanitising, sharing, URLs, colours
-  storage/          StorageAdapter interface + the localStorage implementation
+  storage/          StorageAdapter interface, local + remote implementations
   store/            Zustand store, undo history, debounced persistence
   hooks/            Board measurement
   components/       UI
+server/             Dependency-free Node sync server (single-document store)
 tests/              Unit tests for the grid and the trust boundary
 ```
 
