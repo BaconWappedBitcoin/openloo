@@ -1,0 +1,61 @@
+name: Publish Docker images
+
+# Builds the web and api images and pushes them to the GitHub Container
+# Registry (ghcr.io) so a self-hosted instance can update by pulling rather than
+# rebuilding — and so Watchtower can auto-update them. Runs on every push to
+# main (tagged :latest) and on version tags (tagged :vX.Y.Z).
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: web
+            context: .
+            dockerfile: Dockerfile
+          - name: api
+            context: ./server
+            dockerfile: ./server/Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+
+      # QEMU + Buildx give us multi-architecture images (amd64 for most servers,
+      # arm64 for a Raspberry Pi / Apple-silicon host).
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/openloo-${{ matrix.name }}
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=tag
+            type=sha,format=short
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

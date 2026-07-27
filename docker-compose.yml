@@ -1,9 +1,16 @@
 services:
   # Static frontend on nginx. Also reverse-proxies /api to the sync service.
   web:
+    # Pull the published image by default so `docker compose pull && up -d`
+    # updates without rebuilding. `build:` stays as a fallback — use
+    # `docker compose up -d --build` to build from source instead. Override the
+    # image (e.g. to your own fork's registry) with OPENLOO_WEB_IMAGE in .env.
+    image: ${OPENLOO_WEB_IMAGE:-ghcr.io/baconwappedbitcoin/openloo-web:latest}
     build: .
-    image: openloo-web:latest
     container_name: openloo-web
+    labels:
+      # Let Watchtower auto-update this container when a new image is published.
+      - com.centurylinklabs.watchtower.enable=true
     ports:
       # host:container. nginx listens on 8080 inside the container; we publish
       # it on 8086 because 8080 is a common port to already have taken. Change
@@ -30,10 +37,12 @@ services:
   # published to the host — only the web service reaches it, over the internal
   # compose network.
   api:
+    image: ${OPENLOO_API_IMAGE:-ghcr.io/baconwappedbitcoin/openloo-api:latest}
     build: ./server
-    image: openloo-api:latest
     container_name: openloo-api
     restart: unless-stopped
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
     environment:
       # Optional. Set a passcode here to configure it up front, or leave it
       # blank and create one through the first-run screen in the browser. Until

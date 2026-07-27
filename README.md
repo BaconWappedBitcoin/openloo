@@ -93,6 +93,29 @@ elsewhere; nginx always listens on 8080 inside the container.
 > passcode and boards travel in plain HTTP otherwise). On a LAN or a Tailnet,
 > plain HTTP is usually fine.
 
+### Updating
+
+The compose file pulls pre-built images from the GitHub Container Registry, so
+updating does not rebuild anything.
+
+**Manually:**
+
+```bash
+docker compose pull && docker compose up -d
+```
+
+**Automatically:** the web and api containers are labelled
+`com.centurylinklabs.watchtower.enable=true`, so if you run
+[Watchtower](https://containrrr.dev/watchtower/) it will pull new images and
+recreate them for you — no action needed. Your boards live in the `openloo-data`
+volume and are untouched by updates.
+
+Images are published to `ghcr.io/<owner>/openloo-web` and `…/openloo-api` on
+every push to `main` (`:latest`) and on version tags (`:vX.Y.Z`). To pin a
+version instead of tracking latest, set `OPENLOO_WEB_IMAGE` and
+`OPENLOO_API_IMAGE` in `.env`. Prefer to build from source? `docker compose up
+-d --build` uses the bundled `build:` definitions instead of the registry.
+
 ### Static files
 
 Any static host will do — there is nothing to configure.
