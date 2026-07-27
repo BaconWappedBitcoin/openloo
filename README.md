@@ -6,6 +6,10 @@ no tracking, and no server holding your links.
 
 ![OpenLoo dashboard](docs/screenshot.png)
 
+**[Try the live demo →](https://baconwappedbitcoin.github.io/openloo/)** — it runs
+entirely in your browser. Any boards you make there are stored only on your own
+device; nothing is uploaded, and no one else can see them.
+
 ## What it is
 
 OpenLoo is a **static web app**. There is no backend, no database, and no API.
