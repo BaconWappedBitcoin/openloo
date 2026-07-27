@@ -156,7 +156,7 @@ export function sanitizeWebmix(value: unknown): Webmix | null {
   const now = Date.now()
   return {
     id: str(raw.id, 40) || newId(),
-    name: str(raw.name, MAX_NAME) || 'Webmix',
+    name: str(raw.name, MAX_NAME) || 'Openmix',
     cols,
     rows,
     tiles,

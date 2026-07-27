@@ -41,7 +41,11 @@ export function TileEditor({ draft, maxW, maxH, onClose }: TileEditorProps) {
   const [url, setUrl] = useState(existing?.url ?? '')
   const [title, setTitle] = useState(existing?.title ?? '')
   const [color, setColor] = useState(existing?.color ?? PALETTE[7])
-  const [icon, setIcon] = useState<IconSpec>(existing?.icon ?? { kind: 'letter' })
+  // When a favicon provider is configured, new tiles default to the site's
+  // favicon; otherwise to initials. An existing tile keeps whatever it has.
+  const [icon, setIcon] = useState<IconSpec>(
+    existing?.icon ?? (iconProvider !== 'none' ? { kind: 'favicon' } : { kind: 'letter' }),
+  )
   const [openInNewTab, setOpenInNewTab] = useState(existing?.openInNewTab ?? true)
   const [size, setSize] = useState({ w: existing?.w ?? 1, h: existing?.h ?? 1 })
   const [urlError, setUrlError] = useState<string | null>(null)
@@ -255,7 +259,7 @@ export function TileEditor({ draft, maxW, maxH, onClose }: TileEditorProps) {
       </Field>
 
       {existing && otherWebmixes.length > 0 ? (
-        <Field label="Move to another webmix">
+        <Field label="Move to another Openmix">
           <select
             className={inputClass}
             value=""
@@ -264,9 +268,9 @@ export function TileEditor({ draft, maxW, maxH, onClose }: TileEditorProps) {
               if (!targetId) return
               if (moveTileToWebmix(existing.id, targetId)) onClose()
             }}
-            aria-label="Move this tile to another webmix"
+            aria-label="Move this tile to another Openmix"
           >
-            <option value="">Choose a webmix…</option>
+            <option value="">Choose an Openmix…</option>
             {otherWebmixes.map((mix) => (
               <option key={mix.id} value={mix.id}>
                 {mix.name}

@@ -121,7 +121,7 @@ export default function App() {
 
       {editMode ? (
         <p className="pb-1 text-center text-xs text-[var(--color-ink-muted)]">
-          Click a tile to edit · drag to rearrange or onto a webmix tab to move it · red × deletes
+          Click a tile to edit · drag to rearrange or onto an Openmix tab to move it · red × deletes
         </p>
       ) : null}
 
@@ -184,7 +184,7 @@ function IncomingWebmixDialog({
 
   return (
     <Modal
-      title="Someone shared a webmix with you"
+      title="Someone shared an Openmix with you"
       onClose={onCancel}
       footer={
         <>

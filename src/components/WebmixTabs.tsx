@@ -35,7 +35,7 @@ export function WebmixTabs({
     <div
       className="flex items-stretch gap-1.5 overflow-x-auto border-b border-[var(--color-line)] bg-[var(--color-surface-raised)] px-3 pt-2"
       role="tablist"
-      aria-label="Webmixes"
+      aria-label="Openmixes"
     >
       {profile.webmixes.map((webmix) => {
         const active = webmix.id === activeWebmixId
@@ -73,7 +73,7 @@ export function WebmixTabs({
             onSelect={() => setActiveWebmix(webmix.id)}
             onRename={() => setRenamingId(webmix.id)}
             onDelete={() => {
-              if (confirm(`Delete the webmix "${webmix.name}"? You can undo this.`)) {
+              if (confirm(`Delete the Openmix "${webmix.name}"? You can undo this.`)) {
                 removeWebmix(webmix.id)
               }
             }}
@@ -83,11 +83,11 @@ export function WebmixTabs({
 
       <button
         type="button"
-        onClick={() => addWebmix('New webmix')}
+        onClick={() => addWebmix('New Openmix')}
         className="mb-2 shrink-0 self-center rounded-lg px-3 py-2 text-sm font-medium text-[var(--color-ink-muted)] transition hover:bg-[var(--color-surface)]"
-        aria-label="Add a webmix"
+        aria-label="Add an Openmix"
       >
-        + Webmix
+        + Openmix
       </button>
     </div>
   )
@@ -149,7 +149,7 @@ function WebmixTab({
           <button
             type="button"
             onClick={onRename}
-            aria-label={`Rename webmix ${webmix.name}`}
+            aria-label={`Rename Openmix ${webmix.name}`}
             title="Rename"
             className="flex h-5 w-5 items-center justify-center rounded text-xs text-[var(--color-ink-muted)] hover:bg-[var(--color-line)] hover:text-[var(--color-ink)]"
           >
@@ -159,7 +159,7 @@ function WebmixTab({
             <button
               type="button"
               onClick={onDelete}
-              aria-label={`Delete webmix ${webmix.name}`}
+              aria-label={`Delete Openmix ${webmix.name}`}
               title="Delete"
               className="flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-xs leading-none text-white hover:bg-red-700"
             >

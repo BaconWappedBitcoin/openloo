@@ -34,7 +34,7 @@ export function createTile(partial: Partial<Tile> & { url: string }): Tile {
   }
 }
 
-export function createWebmix(name = 'My webmix', cols = 9, rows = 6): Webmix {
+export function createWebmix(name = 'My Openmix', cols = 9, rows = 6): Webmix {
   const now = Date.now()
   return { id: newId(), name, cols, rows, tiles: [], createdAt: now, updatedAt: now }
 }

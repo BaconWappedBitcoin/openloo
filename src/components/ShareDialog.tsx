@@ -70,7 +70,7 @@ export function ShareDialog({ webmix, data, onClose }: ShareDialogProps) {
       return
     }
 
-    notify('Could not read any webmixes from that file.', 'error')
+    notify('Could not read any Openmixes from that file.', 'error')
   }
 
   const tooLong = shareUrl !== null && shareUrl.length > SHARE_LENGTH_WARNING
@@ -111,7 +111,7 @@ export function ShareDialog({ webmix, data, onClose }: ShareDialogProps) {
         </p>
         <div className="flex flex-wrap gap-2">
           <Button onClick={() => downloadJson(`${slug(webmix.name)}-${dateStamp()}.json`, webmix)}>
-            This webmix
+            This Openmix
           </Button>
           <Button onClick={() => downloadJson(`openloo-backup-${dateStamp()}.json`, data)}>
             Everything (backup)
@@ -122,7 +122,7 @@ export function ShareDialog({ webmix, data, onClose }: ShareDialogProps) {
       <section>
         <h3 className="mb-1 text-sm font-semibold">Import</h3>
         <p className="mb-2.5 text-xs text-[var(--color-ink-muted)]">
-          Accepts either a single webmix or a full backup. Imported data is validated first —
+          Accepts either a single Openmix or a full backup. Imported data is validated first —
           tiles with unsafe addresses are dropped.
         </p>
         <Button onClick={() => void importFile()}>Choose a file…</Button>
@@ -136,6 +136,6 @@ function slug(value: string): string {
     value
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-|-$/g, '') || 'webmix'
+      .replace(/^-|-$/g, '') || 'openmix'
   )
 }

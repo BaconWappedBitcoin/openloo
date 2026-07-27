@@ -58,7 +58,7 @@ export function Toolbar({
           + Tile
         </ToolbarButton>
 
-        <ToolbarButton onClick={onOpenShare} label="Share or export this webmix">
+        <ToolbarButton onClick={onOpenShare} label="Share or export this Openmix">
           Share
         </ToolbarButton>
 

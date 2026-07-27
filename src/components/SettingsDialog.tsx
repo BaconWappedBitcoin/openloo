@@ -104,7 +104,7 @@ export function SettingsDialog({
       <section className="mb-7">
         <SectionTitle>Grid — “{webmix.name}”</SectionTitle>
         <p className="mb-3 text-xs text-[var(--color-ink-muted)]">
-          Applies to the current webmix. Shrinking the grid can displace tiles; anything that
+          Applies to the current Openmix. Shrinking the grid can displace tiles; anything that
           cannot be rehomed is removed and reported, and undo restores it.
         </p>
         <div className="grid grid-cols-2 gap-4">
@@ -201,7 +201,7 @@ export function SettingsDialog({
       <section className="mb-7">
         <SectionTitle>Profiles</SectionTitle>
         <p className="mb-3 text-xs text-[var(--color-ink-muted)]">
-          Profiles are separate sets of webmixes stored in this browser. They are a convenience,
+          Profiles are separate sets of Openmixes stored in this browser. They are a convenience,
           not a security boundary — anyone using this browser can switch between them.
         </p>
 
@@ -222,7 +222,7 @@ export function SettingsDialog({
                   const count = profile.webmixes.length
                   if (
                     confirm(
-                      `Delete profile “${profile.name}” and its ${count} webmix${
+                      `Delete profile “${profile.name}” and its ${count} Openmix${
                         count === 1 ? '' : 'es'
                       }? You can undo this.`,
                     )
@@ -267,7 +267,7 @@ export function SettingsDialog({
           onClick={() => {
             if (
               confirm(
-                'Delete all profiles, webmixes and tiles on this device and start over? Export a backup first if you want to keep anything.',
+                'Delete all profiles, Openmixes and tiles on this device and start over? Export a backup first if you want to keep anything.',
               )
             ) {
               resetEverything()

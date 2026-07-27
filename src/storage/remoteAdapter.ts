@@ -116,7 +116,7 @@ export class RemoteStorageAdapter implements StorageAdapter {
         const merged = body.data ? sanitizeAppData(body.data) : null
         if (merged && this.externalChange) this.externalChange(merged)
         throw new StorageError(
-          'This webmix was being edited on another device; the newer version was loaded.',
+          'This Openmix was being edited on another device; the newer version was loaded.',
         )
       }
 

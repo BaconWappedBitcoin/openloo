@@ -42,7 +42,7 @@ export class LocalStorageAdapter implements StorageAdapter {
         (cause.name === 'QuotaExceededError' || cause.code === 22)
       throw new StorageError(
         quotaExceeded
-          ? 'Out of local storage space. Large uploaded icons are the usual cause — try removing some, or export a backup and trim old webmixes.'
+          ? 'Out of local storage space. Large uploaded icons are the usual cause — try removing some, or export a backup and trim old Openmixes.'
           : 'Could not save to local storage.',
         cause,
       )

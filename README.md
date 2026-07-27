@@ -33,8 +33,9 @@ uses it; otherwise it stays local. Same build, either way.
 - **Grid of tiles** — 1×1 up to 3×2, drag to rearrange, arrow keys to nudge
 - **Tile icons** — the site's real favicon, a curated set of ready-made icons
   to pick from, any emoji, or an image you upload
-- **Multiple webmixes** — tabs along the bottom, one board each
-- **Local profiles** — separate sets of boards in one browser (work, home, kids)
+- **Multiple Openmixes** — each Openmix is a page of tiles, switched via the
+  tab bar at the top; move a tile between them by dragging it onto a tab
+- **Local profiles** — separate sets of Openmixes in one browser (work, home, kids)
 - **Search bar** — DuckDuckGo, Startpage, Brave, Google, Bing, Ecosia, Wikipedia,
   YouTube, or your own `%s` template; typing a bare domain goes straight there
 - **Cross-device sync (optional)** — self-host with the sync server and your
@@ -102,11 +103,31 @@ path at build time:
 BASE_PATH=/openloo/ npm run build
 ```
 
-### GitHub Pages
+### Host your own copy on GitHub Pages (free, no server)
 
-The included workflow (`.github/workflows/pages.yml`) builds and publishes on
-every push to `main`. Enable it under **Settings → Pages → Source: GitHub
-Actions**. The base path is set automatically from the repository name.
+You can host your own OpenLoo on GitHub Pages in a couple of minutes — no
+server, no cost. This gives you the local, browser-only build (no cross-device
+sync; for that, self-host with Docker as above).
+
+1. **Fork this repository** to your own account (top-right **Fork** button).
+2. In your fork, open **Settings → Pages** and set **Source** to
+   **GitHub Actions**.
+3. That's it. The included workflow (`.github/workflows/pages.yml`) builds and
+   deploys on every push to `main`, and again whenever you enable Pages. When it
+   finishes (watch the **Actions** tab), your dashboard is live at:
+
+   ```
+   https://<your-username>.github.io/<repo-name>/
+   ```
+
+The workflow sets the base path automatically from the repository name and adds
+a `404.html` fallback so deep links work. To update later, just push to `main`
+(or edit files right on GitHub) and it redeploys.
+
+> The public demo has extra sample content switched on via a `VITE_DEMO=1` build
+> flag. Your fork builds **without** it, so you start from a clean, privacy-first
+> board (no favicon requests until you turn a provider on). To seed the demo
+> content in your own build, set `VITE_DEMO: '1'` in the workflow's build step.
 
 ### Development
 

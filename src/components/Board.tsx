@@ -144,7 +144,7 @@ function BoardTile({ tile, settings, cell, step, editMode, dimmed, onEdit }: Boa
           {...attributes}
           onClick={onEdit}
           onKeyDown={onKeyDown}
-          aria-label={`Edit ${tile.title}. Arrow keys to move, or drag onto a webmix tab.`}
+          aria-label={`Edit ${tile.title}. Arrow keys to move, or drag onto an Openmix tab.`}
           className="h-full w-full cursor-grab touch-none active:cursor-grabbing"
         >
           {face}

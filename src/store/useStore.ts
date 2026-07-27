@@ -412,7 +412,7 @@ export const useStore = create<StoreState>()((set, get) => {
         if (!profile) return data
         // A profile with no webmixes has no coherent UI; keep the last one.
         if (profile.webmixes.length <= 1) {
-          get().notify('A profile needs at least one webmix.', 'error')
+          get().notify('A profile needs at least one Openmix.', 'error')
           return data
         }
         const webmixes = profile.webmixes.filter((webmix) => webmix.id !== id)
