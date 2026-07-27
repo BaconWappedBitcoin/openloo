@@ -3,7 +3,7 @@ import type { IconProvider, IconSpec, Tile } from '../types'
 import { PALETTE } from '../lib/colors'
 import { faviconUrl } from '../lib/favicon'
 import { safeImageUrl, safeLinkUrl, suggestTitle } from '../lib/url'
-import { useStore } from '../store/useStore'
+import { activeProfileOf, activeWebmixOf, useStore } from '../store/useStore'
 import { IconPicker } from './IconPicker'
 import { Button, Field, inputClass, Modal } from './Modal'
 
@@ -28,9 +28,15 @@ export function TileEditor({ draft, maxW, maxH, onClose }: TileEditorProps) {
   const updateTile = useStore((state) => state.updateTile)
   const removeTile = useStore((state) => state.removeTile)
   const setTileSize = useStore((state) => state.setTileSize)
+  const moveTileToWebmix = useStore((state) => state.moveTileToWebmix)
   const notify = useStore((state) => state.notify)
   const iconProvider = useStore((state) => state.data.settings.iconProvider)
   const updateSettings = useStore((state) => state.updateSettings)
+  const profile = useStore((state) => activeProfileOf(state.data))
+  const currentWebmixId = useStore((state) => activeWebmixOf(state.data)?.id)
+
+  // Other webmixes this tile could be moved to (only meaningful for an existing tile).
+  const otherWebmixes = (profile?.webmixes ?? []).filter((mix) => mix.id !== currentWebmixId)
 
   const [url, setUrl] = useState(existing?.url ?? '')
   const [title, setTitle] = useState(existing?.title ?? '')
@@ -247,6 +253,28 @@ export function TileEditor({ draft, maxW, maxH, onClose }: TileEditorProps) {
           ))}
         </div>
       </Field>
+
+      {existing && otherWebmixes.length > 0 ? (
+        <Field label="Move to another webmix">
+          <select
+            className={inputClass}
+            value=""
+            onChange={(event) => {
+              const targetId = event.target.value
+              if (!targetId) return
+              if (moveTileToWebmix(existing.id, targetId)) onClose()
+            }}
+            aria-label="Move this tile to another webmix"
+          >
+            <option value="">Choose a webmix…</option>
+            {otherWebmixes.map((mix) => (
+              <option key={mix.id} value={mix.id}>
+                {mix.name}
+              </option>
+            ))}
+          </select>
+        </Field>
+      ) : null}
 
       <label className="flex items-center gap-2 text-sm">
         <input

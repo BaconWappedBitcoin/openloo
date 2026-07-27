@@ -88,6 +88,8 @@ interface StoreState {
   removeTile(id: string): void
   moveTile(id: string, x: number, y: number): void
   setTileSize(id: string, w: number, h: number): void
+  /** Move a tile out of its current webmix into another one in the profile. */
+  moveTileToWebmix(tileId: string, targetWebmixId: string): boolean
 
   // Webmixes
   addWebmix(name: string): void
@@ -330,6 +332,51 @@ export const useStore = create<StoreState>()((set, get) => {
         }
         return { ...webmix, tiles }
       })
+    },
+
+    moveTileToWebmix(tileId, targetWebmixId) {
+      const { data, history } = get()
+      const profile = activeProfileOf(data)
+      if (!profile) return false
+
+      const source = profile.webmixes.find((mix) => mix.tiles.some((t) => t.id === tileId))
+      const target = profile.webmixes.find((mix) => mix.id === targetWebmixId)
+      if (!source || !target || source.id === target.id) return false
+
+      const tile = source.tiles.find((t) => t.id === tileId)
+      if (!tile) return false
+
+      // The destination grid may be smaller, so clamp the tile and find a slot;
+      // refuse (rather than overlap) when the target has no room.
+      const w = Math.min(tile.w, target.cols)
+      const h = Math.min(tile.h, target.rows)
+      const spot = findFreeSpot(target.tiles, target.cols, target.rows, w, h)
+      if (!spot) {
+        get().notify(`"${target.name}" has no room for that tile.`, 'error')
+        return false
+      }
+
+      const now = Date.now()
+      const moved = { ...tile, x: spot.x, y: spot.y, w, h }
+      const nextProfile = {
+        ...profile,
+        webmixes: profile.webmixes.map((mix) => {
+          if (mix.id === source.id) {
+            return { ...mix, tiles: mix.tiles.filter((t) => t.id !== tileId), updatedAt: now }
+          }
+          if (mix.id === target.id) {
+            return { ...mix, tiles: [...mix.tiles, moved], updatedAt: now }
+          }
+          return mix
+        }),
+      }
+
+      set({
+        data: replaceProfile(data, nextProfile),
+        history: [...history, data].slice(-MAX_HISTORY),
+      })
+      get().notify(`Moved "${tile.title}" to "${target.name}".`)
+      return true
     },
 
     addWebmix(name) {

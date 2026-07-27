@@ -3,16 +3,14 @@ import type { Webmix } from './types'
 import { activeProfileOf, activeWebmixOf, useStore } from './store/useStore'
 import { decodeWebmix, takeImportPayloadFromLocation } from './lib/share'
 import { hostOf } from './lib/url'
-import { Board } from './components/Board'
 import { LoginGate } from './components/LoginGate'
 import { SetupGate } from './components/SetupGate'
 import { Notices } from './components/Notices'
-import { SearchBar } from './components/SearchBar'
 import { SettingsDialog } from './components/SettingsDialog'
 import { ShareDialog } from './components/ShareDialog'
 import { TileEditor, type TileDraft } from './components/TileEditor'
 import { Toolbar } from './components/Toolbar'
-import { WebmixTabs } from './components/WebmixTabs'
+import { Workspace } from './components/Workspace'
 import { Button, Modal } from './components/Modal'
 
 type Dialog =
@@ -112,13 +110,8 @@ export default function App() {
         onAddTile={() => setDialog({ kind: 'tile', draft: {} })}
       />
 
-      {data.settings.showSearch ? (
-        <div className="px-4 pt-4">
-          <SearchBar />
-        </div>
-      ) : null}
-
-      <Board
+      <Workspace
+        profile={profile}
         webmix={webmix}
         settings={data.settings}
         editMode={editMode}
@@ -128,11 +121,9 @@ export default function App() {
 
       {editMode ? (
         <p className="pb-1 text-center text-xs text-[var(--color-ink-muted)]">
-          Drag tiles to rearrange · click a tile to edit · arrow keys move the focused tile
+          Drag tiles to rearrange · click a tile to edit · drag onto a webmix tab to move it there
         </p>
       ) : null}
-
-      <WebmixTabs profile={profile} activeWebmixId={webmix.id} />
 
       {dialog.kind === 'tile' ? (
         <TileEditor
