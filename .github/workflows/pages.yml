@@ -30,9 +30,12 @@ jobs:
 
       - name: Build
         # Pages serves a project site from /<repo>/, so the bundle needs that
-        # base path baked in for its asset URLs to resolve.
+        # base path baked in for its asset URLs to resolve. VITE_DEMO switches on
+        # the richer, categorised starter content with real favicons — the public
+        # demo only; a self-hosted build leaves it off and stays request-free.
         env:
           BASE_PATH: /${{ github.event.repository.name }}/
+          VITE_DEMO: '1'
         run: npm run build
 
       - name: Add SPA fallback
