@@ -1,0 +1,19 @@
+services:
+  openloo:
+    build: .
+    image: openloo:latest
+    container_name: openloo
+    ports:
+      - '8080:8080'
+    restart: unless-stopped
+    read_only: true
+    # nginx needs writable scratch space even when the image itself is read-only:
+    # the pid file lives in /var/run and temp bodies in /var/cache/nginx.
+    tmpfs:
+      - /tmp
+      - /var/run
+      - /var/cache/nginx
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL

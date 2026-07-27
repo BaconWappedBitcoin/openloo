@@ -1,0 +1,52 @@
+@import 'tailwindcss';
+
+/* Theme is driven by a class on <html> so the user can override the OS setting. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-surface: #f1f5f9;
+  --color-surface-raised: #ffffff;
+  --color-ink: #0f172a;
+  --color-ink-muted: #64748b;
+  --color-line: #e2e8f0;
+}
+
+:root.dark {
+  --color-surface: #0b1120;
+  --color-surface-raised: #151d2e;
+  --color-ink: #e2e8f0;
+  --color-ink-muted: #94a3b8;
+  --color-line: #26324a;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  font-family:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Respect users who ask for less motion; the tile hover lift is decorative. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* A visible focus ring everywhere, since the board is keyboard-navigable. */
+:focus-visible {
+  outline: 2px solid #3e63dd;
+  outline-offset: 2px;
+}

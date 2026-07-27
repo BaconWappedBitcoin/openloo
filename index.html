@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <meta
+      name="description"
+      content="OpenLoo — a self-hosted, privacy-first visual bookmark dashboard. Your links, your grid, your server."
+    />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <title>OpenLoo</title>
+    <script>
+      // Apply the persisted theme before first paint to avoid a flash.
+      try {
+        var raw = localStorage.getItem('openloo:v1')
+        var theme = raw ? (JSON.parse(raw).settings || {}).theme : null
+        var dark =
+          theme === 'dark' ||
+          ((!theme || theme === 'auto') &&
+            window.matchMedia('(prefers-color-scheme: dark)').matches)
+        if (dark) document.documentElement.classList.add('dark')
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
