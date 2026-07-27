@@ -169,10 +169,13 @@ export const useStore = create<StoreState>()((set, get) => {
 
   function wireSubscription(): void {
     adapter.subscribe?.((incoming) => {
-      // Another tab or device wrote; adopt its state rather than fight over it.
-      // Guard the write so the persistence subscription does not save it back.
+      // Another tab or device wrote; adopt its boards and tiles — but keep the
+      // tab we are looking at. Which openmix is active is a per-device view
+      // preference, so a poll must not yank us to whatever tab another device
+      // has open. Guard the write so the persistence subscription does not echo
+      // it back to the server.
       applyingRemote = true
-      set({ data: incoming })
+      set((state) => ({ data: preserveActiveSelection(state.data, incoming) }))
       applyingRemote = false
     })
   }
@@ -557,6 +560,32 @@ function replaceProfile(data: AppData, profile: Profile): AppData {
     ...data,
     profiles: data.profiles.map((candidate) =>
       candidate.id === profile.id ? profile : candidate,
+    ),
+  }
+}
+
+/**
+ * Adopt server data while keeping the locally-selected profile and webmix, so a
+ * poll updates board contents without switching which tab is on screen. The
+ * local selection is kept only when it still exists in the incoming data;
+ * otherwise the server's selection stands.
+ */
+function preserveActiveSelection(local: AppData, incoming: AppData): AppData {
+  const wantProfileId = incoming.profiles.some((profile) => profile.id === local.activeProfileId)
+    ? local.activeProfileId
+    : incoming.activeProfileId
+  const localProfile = local.profiles.find((profile) => profile.id === wantProfileId)
+  const wantWebmixId = localProfile?.activeWebmixId
+
+  return {
+    ...incoming,
+    activeProfileId: wantProfileId,
+    profiles: incoming.profiles.map((profile) =>
+      profile.id === wantProfileId &&
+      wantWebmixId &&
+      profile.webmixes.some((webmix) => webmix.id === wantWebmixId)
+        ? { ...profile, activeWebmixId: wantWebmixId }
+        : profile,
     ),
   }
 }
