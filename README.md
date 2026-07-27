@@ -53,8 +53,12 @@ follows you between devices, OpenLoo is not that — see
 docker compose up -d
 ```
 
-Then open <http://localhost:8080>. The container runs nginx as a non-root user
+Then open <http://localhost:8086>. The container runs nginx as a non-root user
 with a read-only filesystem and a restrictive Content-Security-Policy.
+
+The host port defaults to **8086** (8080 is so commonly already in use). Change
+the left-hand number of the `ports` mapping in `docker-compose.yml` to serve it
+elsewhere; nginx always listens on 8080 inside the container.
 
 ### Static files
 
