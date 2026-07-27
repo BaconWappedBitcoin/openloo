@@ -3,6 +3,7 @@ import type { AppData, Webmix } from '../types'
 import { buildShareUrl, encodeWebmix, SHARE_LENGTH_WARNING } from '../lib/share'
 import { dateStamp, downloadJson, pickJsonFile } from '../lib/files'
 import { sanitizeAppData, sanitizeWebmix } from '../lib/sanitize'
+import { SYMBALOO_EXPORT_SNIPPET } from '../lib/symbaloo'
 import { useStore } from '../store/useStore'
 import { Button, inputClass, Modal } from './Modal'
 
@@ -35,6 +36,15 @@ export function ShareDialog({ webmix, data, onClose }: ShareDialogProps) {
       notify('Link copied.')
     } catch {
       notify('Could not copy automatically — select the link and copy it.', 'error')
+    }
+  }
+
+  async function copySnippet() {
+    try {
+      await navigator.clipboard.writeText(SYMBALOO_EXPORT_SNIPPET)
+      notify("Snippet copied — paste it into Symbaloo's console.")
+    } catch {
+      notify('Could not copy automatically — select the snippet and copy it.', 'error')
     }
   }
 
@@ -119,13 +129,34 @@ export function ShareDialog({ webmix, data, onClose }: ShareDialogProps) {
         </div>
       </section>
 
-      <section>
+      <section className="mb-6">
         <h3 className="mb-1 text-sm font-semibold">Import</h3>
         <p className="mb-2.5 text-xs text-[var(--color-ink-muted)]">
           Accepts either a single Openmix or a full backup. Imported data is validated first —
           tiles with unsafe addresses are dropped.
         </p>
         <Button onClick={() => void importFile()}>Choose a file…</Button>
+      </section>
+
+      <section>
+        <h3 className="mb-1 text-sm font-semibold">Migrate from Symbaloo</h3>
+        <p className="mb-2.5 text-xs text-[var(--color-ink-muted)]">
+          Symbaloo has no export, so this pulls a webmix out from Symbaloo's own page. Open your
+          Symbaloo webmix in another tab, then:
+        </p>
+        <ol className="mb-2.5 list-decimal space-y-1 pl-5 text-xs text-[var(--color-ink-muted)]">
+          <li>On the Symbaloo tab, open the browser console (F12 → Console).</li>
+          <li>Paste the snippet below and press Enter — a JSON file downloads.</li>
+          <li>
+            Come back here and use <strong>Import → Choose a file…</strong> above to load it.
+          </li>
+        </ol>
+        <pre className="max-h-28 overflow-auto rounded-lg border border-[var(--color-line)] bg-[var(--color-surface)] p-2 text-[10px] leading-tight whitespace-pre-wrap">
+          {SYMBALOO_EXPORT_SNIPPET}
+        </pre>
+        <Button className="mt-2" onClick={() => void copySnippet()}>
+          Copy snippet
+        </Button>
       </section>
     </Modal>
   )

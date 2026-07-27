@@ -39,7 +39,10 @@ export function Board({
   const { cell, boardWidth, boardHeight, ready } = metrics
   const step = cell + gap
 
-  const emptyCells = useMemo(() => (editMode ? findEmptyCells(webmix) : []), [editMode, webmix])
+  // Empty cells are shown in both modes now: faint blanks that reveal an "add"
+  // affordance on hover, so a tile can be added anywhere without entering edit
+  // mode. (`editMode` still governs the drag/delete controls on real tiles.)
+  const emptyCells = useMemo(() => findEmptyCells(webmix), [webmix])
 
   const addTile = useStore((state) => state.addTile)
   const notify = useStore((state) => state.notify)
@@ -127,7 +130,8 @@ export function Board({
             type="button"
             onClick={() => onAddTileAt({ x, y })}
             aria-label={`Add a tile at column ${x + 1}, row ${y + 1}`}
-            className="absolute flex items-center justify-center border-2 border-dashed border-[var(--color-line)] text-xl text-[var(--color-ink-muted)] opacity-60 transition hover:border-blue-400 hover:text-blue-500 hover:opacity-100"
+            title="Add a tile"
+            className="group/add absolute flex items-center justify-center border border-dashed border-[var(--color-line)] text-[var(--color-ink-muted)] opacity-25 transition hover:border-blue-400 hover:bg-blue-500/5 hover:text-blue-500 hover:opacity-100"
             style={{
               left: x * step,
               top: y * step,
@@ -136,7 +140,7 @@ export function Board({
               borderRadius: settings.tileRadius,
             }}
           >
-            +
+            <span className="text-2xl opacity-0 transition group-hover/add:opacity-100">+</span>
           </button>
         ))}
 

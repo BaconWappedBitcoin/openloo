@@ -125,6 +125,48 @@ describe('sanitizeWebmix', () => {
     expect(sanitizeWebmix('nope')).toBeNull()
     expect(sanitizeWebmix(42)).toBeNull()
   })
+
+  it('imports a Symbaloo-exported webmix intact (url icons, hex colours, 12-wide grid)', () => {
+    // The shape the Symbaloo export snippet produces.
+    const converted = {
+      name: 'US Homepage',
+      cols: 12,
+      rows: 6,
+      tiles: [
+        {
+          title: 'MathNook',
+          url: 'https://www.mathnook.com/',
+          x: 1,
+          y: 1,
+          w: 1,
+          h: 1,
+          color: '#f17a21',
+          icon: { kind: 'url', src: 'https://img02.symbaloo.com/abc.png' },
+          openInNewTab: true,
+        },
+        {
+          title: 'Canva for Education',
+          url: 'https://www.canva.com/education/',
+          x: 0,
+          y: 1,
+          w: 1,
+          h: 1,
+          icon: { kind: 'url', src: 'https://cdn01.symbaloo.com/def.png' },
+          openInNewTab: true,
+        },
+      ],
+    }
+
+    const result = sanitizeWebmix(converted)
+    expect(result?.name).toBe('US Homepage')
+    expect(result?.cols).toBe(12)
+    expect(result?.tiles).toHaveLength(2)
+    const math = result!.tiles.find((t) => t.title === 'MathNook')!
+    expect(math.url).toBe('https://www.mathnook.com/')
+    expect(math.color).toBe('#f17a21')
+    // The Symbaloo tile image survives as a url icon.
+    expect(math.icon).toMatchObject({ kind: 'url', src: 'https://img02.symbaloo.com/abc.png' })
+  })
 })
 
 describe('sanitizeAppData', () => {

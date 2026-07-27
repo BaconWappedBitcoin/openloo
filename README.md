@@ -42,6 +42,11 @@ uses it; otherwise it stays local. Same build, either way.
   boards follow you everywhere, behind one passcode
 - **Share by link** — the whole board is packed into the URL, so there is
   nothing to host
+- **Add tiles fast** — drop a link onto the board to make a tile (no edit mode),
+  or hover an empty cell and click to add one
+- **Migrate from Symbaloo** — Symbaloo has no export, so Share → *Migrate from
+  Symbaloo* gives you a snippet to run on your Symbaloo tab; it downloads your
+  webmix as a file you import here
 - **Import / export** — plain JSON, for backups and moving between browsers
 - **Light and dark** — follows your system by default
 - **Undo** — `Ctrl`/`Cmd`+`Z` for every destructive action
