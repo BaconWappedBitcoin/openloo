@@ -80,7 +80,12 @@ export function Workspace({
 
   return (
     <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <WebmixTabs profile={profile} activeWebmixId={webmix.id} draggingTile={draggingTile} />
+      <WebmixTabs
+        profile={profile}
+        activeWebmixId={webmix.id}
+        editMode={editMode}
+        draggingTile={draggingTile}
+      />
 
       {settings.showSearch ? (
         <div className="px-4 pt-4">

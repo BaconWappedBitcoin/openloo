@@ -101,6 +101,7 @@ interface BoardTileProps {
 
 function BoardTile({ tile, settings, cell, step, editMode, dimmed, onEdit }: BoardTileProps) {
   const moveTile = useStore((state) => state.moveTile)
+  const removeTile = useStore((state) => state.removeTile)
   const { attributes, listeners, setNodeRef } = useDraggable({
     id: tile.id,
     disabled: !editMode,
@@ -135,19 +136,32 @@ function BoardTile({ tile, settings, cell, step, editMode, dimmed, onEdit }: Boa
     }
 
     return (
-      <button
-        ref={setNodeRef}
-        type="button"
-        {...listeners}
-        {...attributes}
-        onClick={onEdit}
-        onKeyDown={onKeyDown}
-        aria-label={`Edit ${tile.title}. Arrow keys to move, or drag onto a webmix tab.`}
-        className="absolute cursor-grab touch-none active:cursor-grabbing"
-        style={style}
-      >
-        {face}
-      </button>
+      <div className="absolute" style={style}>
+        <button
+          ref={setNodeRef}
+          type="button"
+          {...listeners}
+          {...attributes}
+          onClick={onEdit}
+          onKeyDown={onKeyDown}
+          aria-label={`Edit ${tile.title}. Arrow keys to move, or drag onto a webmix tab.`}
+          className="h-full w-full cursor-grab touch-none active:cursor-grabbing"
+        >
+          {face}
+        </button>
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation()
+            removeTile(tile.id)
+          }}
+          aria-label={`Delete ${tile.title}`}
+          title="Delete tile (undo with Ctrl+Z)"
+          className="absolute -top-1.5 -right-1.5 z-10 flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-xs leading-none text-white shadow hover:bg-red-700"
+        >
+          &times;
+        </button>
+      </div>
     )
   }
 

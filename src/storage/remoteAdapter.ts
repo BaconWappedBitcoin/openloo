@@ -53,6 +53,11 @@ export class RemoteStorageAdapter implements StorageAdapter {
   private revision = 0
   private externalChange: ((data: AppData) => void) | null = null
   private poll: ReturnType<typeof setInterval> | undefined
+  // Saves are serialised through this chain so two PUTs are never in flight at
+  // once — otherwise a second save would reuse the revision the first has not
+  // yet bumped, and conflict with our own write.
+  private saveChain: Promise<void> = Promise.resolve()
+  private saving = false
 
   constructor(
     private readonly authRequired: boolean,
@@ -80,27 +85,46 @@ export class RemoteStorageAdapter implements StorageAdapter {
     return body.data ? sanitizeAppData(body.data) : null
   }
 
-  async save(data: AppData): Promise<void> {
-    const response = await this.request('PUT', '/data', {
-      revision: this.revision,
-      data,
-    })
+  save(data: AppData): Promise<void> {
+    // Queue behind any in-flight save so PUTs run strictly one at a time; each
+    // then uses the revision the previous one returned. `.then(run, run)` keeps
+    // the chain alive even if a prior save rejected.
+    const run = () => this.doSave(data)
+    this.saveChain = this.saveChain.then(run, run)
+    return this.saveChain
+  }
 
-    if (response.status === 409) {
-      // Another device saved between our read and this write. Take the
-      // server's version as authoritative and surface it, rather than
-      // overwriting someone else's newer changes.
-      const body = (await response.json()) as { revision: number; data: unknown }
+  private async doSave(data: AppData): Promise<void> {
+    this.saving = true
+    try {
+      let response = await this.request('PUT', '/data', { revision: this.revision, data })
+
+      if (response.status === 409) {
+        // The server moved on. In the ordinary single-user case this is our own
+        // earlier write catching up (a poll, or a previous save), so adopt the
+        // server's revision and re-send our latest state once — last write wins.
+        const body = (await response.json()) as { revision: number }
+        this.revision = body.revision
+        response = await this.request('PUT', '/data', { revision: this.revision, data })
+      }
+
+      if (response.status === 409) {
+        // Still conflicting after a retry: another device is genuinely writing
+        // right now. Take its version rather than clobber it, and say so.
+        const body = (await response.json()) as { revision: number; data: unknown }
+        this.revision = body.revision
+        const merged = body.data ? sanitizeAppData(body.data) : null
+        if (merged && this.externalChange) this.externalChange(merged)
+        throw new StorageError(
+          'This webmix was being edited on another device; the newer version was loaded.',
+        )
+      }
+
+      const body = (await response.json()) as { revision: number }
       this.revision = body.revision
-      const merged = body.data ? sanitizeAppData(body.data) : null
-      if (merged && this.externalChange) this.externalChange(merged)
-      throw new StorageError(
-        'This webmix changed on another device, so your last change was not saved. The newer version has been loaded.',
-      )
+    } finally {
+      this.saving = false
     }
-
-    const body = (await response.json()) as { revision: number }
-    this.revision = body.revision
   }
 
   async clear(): Promise<void> {
@@ -123,6 +147,9 @@ export class RemoteStorageAdapter implements StorageAdapter {
   }
 
   private async checkForUpdates(): Promise<void> {
+    // Do not poll while a save is in flight: the revision is mid-change, and a
+    // reload here would fight our own write.
+    if (this.saving) return
     try {
       const response = await this.request('GET', '/revision')
       const { revision } = (await response.json()) as { revision: number }

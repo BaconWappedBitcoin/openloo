@@ -121,7 +121,7 @@ export default function App() {
 
       {editMode ? (
         <p className="pb-1 text-center text-xs text-[var(--color-ink-muted)]">
-          Drag tiles to rearrange · click a tile to edit · drag onto a webmix tab to move it there
+          Click a tile to edit · drag to rearrange or onto a webmix tab to move it · red × deletes
         </p>
       ) : null}
 

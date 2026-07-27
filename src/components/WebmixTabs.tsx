@@ -6,6 +6,8 @@ import { useStore } from '../store/useStore'
 interface WebmixTabsProps {
   profile: Profile
   activeWebmixId: string
+  /** Rename/delete controls appear only while editing. */
+  editMode: boolean
   /** The tile currently being dragged, if any — turns tabs into drop targets. */
   draggingTile?: Tile | null
 }
@@ -15,7 +17,12 @@ interface WebmixTabsProps {
  * primary way to move between boards. While a tile is being dragged, each tab
  * becomes a drop target so a tile can be flung onto another page.
  */
-export function WebmixTabs({ profile, activeWebmixId, draggingTile }: WebmixTabsProps) {
+export function WebmixTabs({
+  profile,
+  activeWebmixId,
+  editMode,
+  draggingTile,
+}: WebmixTabsProps) {
   const setActiveWebmix = useStore((state) => state.setActiveWebmix)
   const addWebmix = useStore((state) => state.addWebmix)
   const renameWebmix = useStore((state) => state.renameWebmix)
@@ -59,6 +66,7 @@ export function WebmixTabs({ profile, activeWebmixId, draggingTile }: WebmixTabs
             key={webmix.id}
             webmix={webmix}
             active={active}
+            editMode={editMode}
             canDelete={profile.webmixes.length > 1}
             // A tile can only be dropped onto a webmix other than the one it is on.
             dropEnabled={dragging !== null && webmix.id !== activeWebmixId}
@@ -88,6 +96,7 @@ export function WebmixTabs({ profile, activeWebmixId, draggingTile }: WebmixTabs
 interface WebmixTabProps {
   webmix: Profile['webmixes'][number]
   active: boolean
+  editMode: boolean
   canDelete: boolean
   dropEnabled: boolean
   onSelect(): void
@@ -98,6 +107,7 @@ interface WebmixTabProps {
 function WebmixTab({
   webmix,
   active,
+  editMode,
   canDelete,
   dropEnabled,
   onSelect,
@@ -111,15 +121,18 @@ function WebmixTab({
   const { setNodeRef, isOver } = useDroppable({ id: `webmix:${webmix.id}` })
 
   return (
-    <div ref={setNodeRef} className="group relative shrink-0">
+    <div ref={setNodeRef} className="relative shrink-0">
       <button
         type="button"
         role="tab"
         aria-selected={active}
         onClick={onSelect}
         onDoubleClick={onRename}
-        title={`${webmix.name} (double-click to rename)`}
-        className={`mb-[-1px] rounded-t-lg border-b-2 px-4 py-2.5 text-sm font-semibold transition ${
+        title={editMode ? webmix.name : `${webmix.name} — double-click to rename`}
+        className={`mb-[-1px] rounded-t-lg border-b-2 text-sm font-semibold transition ${
+          // Leave room on the right for the rename/delete controls while editing.
+          editMode ? 'py-2.5 pr-12 pl-4' : 'px-4 py-2.5'
+        } ${
           active
             ? 'border-blue-500 bg-[var(--color-surface)] text-[var(--color-ink)]'
             : 'border-transparent text-[var(--color-ink-muted)] hover:bg-[var(--color-surface)]'
@@ -131,15 +144,29 @@ function WebmixTab({
         {webmix.name}
       </button>
 
-      {canDelete ? (
-        <button
-          type="button"
-          onClick={onDelete}
-          aria-label={`Delete webmix ${webmix.name}`}
-          className="absolute top-0.5 right-0 hidden h-4 w-4 items-center justify-center rounded-full bg-red-600 text-[10px] leading-none text-white group-hover:flex focus-visible:flex"
-        >
-          &times;
-        </button>
+      {editMode ? (
+        <div className="absolute top-1/2 right-1.5 flex -translate-y-1/2 items-center gap-1">
+          <button
+            type="button"
+            onClick={onRename}
+            aria-label={`Rename webmix ${webmix.name}`}
+            title="Rename"
+            className="flex h-5 w-5 items-center justify-center rounded text-xs text-[var(--color-ink-muted)] hover:bg-[var(--color-line)] hover:text-[var(--color-ink)]"
+          >
+            ✎
+          </button>
+          {canDelete ? (
+            <button
+              type="button"
+              onClick={onDelete}
+              aria-label={`Delete webmix ${webmix.name}`}
+              title="Delete"
+              className="flex h-5 w-5 items-center justify-center rounded-full bg-red-600 text-xs leading-none text-white hover:bg-red-700"
+            >
+              &times;
+            </button>
+          ) : null}
+        </div>
       ) : null}
     </div>
   )
