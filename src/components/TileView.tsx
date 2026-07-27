@@ -44,6 +44,9 @@ export function TileContent({ tile, settings, cell }: TileContentProps) {
           loading="lazy"
           decoding="async"
           referrerPolicy="no-referrer"
+          // Images are natively draggable too; disable so dragging a tile's
+          // icon cannot start a URL drag that creates a duplicate tile.
+          draggable={false}
           onError={() => setIconFailed(true)}
           style={{ width: iconSize, height: iconSize, objectFit: 'contain' }}
           className="drop-shadow-sm"

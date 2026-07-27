@@ -245,6 +245,10 @@ function BoardTile({ tile, settings, cell, step, editMode, dimmed, onEdit }: Boa
       target={tile.openInNewTab ? '_blank' : undefined}
       rel="noopener noreferrer"
       referrerPolicy="no-referrer"
+      // Links are natively draggable; disable it so dragging a tile does not
+      // start a URL drag that the board's own drop handler would turn into a
+      // duplicate tile. Moving tiles is an edit-mode action (pointer-based).
+      draggable={false}
       title={tileLabel(tile)}
       className="absolute transition-transform hover:scale-[1.04]"
       style={style}
