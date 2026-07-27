@@ -7,12 +7,14 @@ services:
       - '8080:8080'
     restart: unless-stopped
     read_only: true
-    # nginx needs writable scratch space even when the image itself is read-only:
-    # the pid file lives in /var/run and temp bodies in /var/cache/nginx.
-    tmpfs:
-      - /tmp
-      - /var/run
-      - /var/cache/nginx
+    # nginx writes its pid and temp files to /tmp (see docker/nginx.conf), so
+    # that single tmpfs is all a read-only container needs. mode 01777 lets the
+    # non-root worker create files in a freshly mounted, root-owned tmpfs.
+    volumes:
+      - type: tmpfs
+        target: /tmp
+        tmpfs:
+          mode: 01777
     security_opt:
       - no-new-privileges:true
     cap_drop:
